@@ -1,0 +1,30 @@
+# Compiled Java files
+*.class
+
+# Log files
+*.log
+
+# IDE files
+.idea/
+*.iml
+.vscode/*
+
+# Keep shared VS Code settings if needed
+!.vscode/settings.json
+!.vscode/launch.json
+!.vscode/extensions.json
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Build output
+bin/
+out/
+target/
+build/
+
+# Local database files
+*.db
+*.sqlite
+*.sqlite3
