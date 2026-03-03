@@ -42,5 +42,3 @@ Example branch names:
 
 ## Sprint 1 Goal
 Establish the technical foundation of Coursely by creating the project structure, initial database schema, core scheduling models, and a basic weekly timetable UI prototype.
-
-Webhook Test
