@@ -1,11 +1,21 @@
 package com.coursely;
 
-import com.coursely.db.DatabaseInitializer;
+import javax.swing.SwingUtilities;
+import javax.swing.UIManager;
+
+import com.coursely.ui.MainFrame;
 
 public class App {
     public static void main(String[] args) {
-        DatabaseInitializer.initialize();
-        System.out.println("Coursely starting...");
-        // Later: launch Swing UI
+        SwingUtilities.invokeLater(() -> {
+            try {
+                UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
+            } catch (Exception ignored) {
+                // Fall back to default look and feel if the system one is unavailable.
+            }
+
+            MainFrame frame = new MainFrame();
+            frame.setVisible(true);
+        });
     }
 }

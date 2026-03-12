@@ -20,6 +20,7 @@ Thumbs.db
 
 # Build output
 bin/
+*.class
 out/
 target/
 build/
