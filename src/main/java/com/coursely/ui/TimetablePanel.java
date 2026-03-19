@@ -2,6 +2,7 @@ package com.coursely.ui;
 
 import java.awt.BorderLayout;
 import java.awt.Color;
+import java.awt.Dimension;
 import java.awt.Font;
 import java.awt.Graphics;
 import java.awt.GridBagConstraints;
@@ -27,6 +28,7 @@ import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.SwingConstants;
 import javax.swing.border.Border;
+import javax.swing.border.LineBorder;
 import javax.swing.border.MatteBorder;
 
 public class TimetablePanel extends JPanel {
@@ -39,28 +41,47 @@ public class TimetablePanel extends JPanel {
 
     private static final DateTimeFormatter SLOT_FORMAT = DateTimeFormatter.ofPattern("h:mm a", Locale.ENGLISH);
     private static final DateTimeFormatter DISPLAY_TIME_FORMAT = DateTimeFormatter.ofPattern("h:mm a", Locale.ENGLISH);
-    private static final Color GRID_LINE_COLOR = new Color(220, 220, 220);
-    private static final Color BLOCK_FILL_COLOR = new Color(219, 235, 255);
+    private static final Color GRID_LINE_COLOR = new Color(205, 216, 229);
+    private static final Color GRID_BORDER_COLOR = new Color(176, 196, 218);
+    private static final Color HEADER_BG_COLOR = new Color(226, 239, 251);
+    private static final Color TIME_COL_BG_COLOR = new Color(244, 248, 252);
+    private static final Color PANEL_BG_COLOR = Theme.BRAND_OFFWHITE;
+    private static final Color BLOCK_FILL_COLOR = Theme.BLOCK_BLUE;
+    private static final Map<String, Color> PRESET_COLORS = createPresetColors();
     private final Map<String, TimetableBodyCell> bodyCells = new HashMap<>();
     private final List<TimetableBlock> blocks = new ArrayList<>();
 
     public TimetablePanel() {
-        setLayout(new BorderLayout(0, 10));
+        setLayout(new BorderLayout(0, 12));
+        setBackground(PANEL_BG_COLOR);
 
         JLabel title = new JLabel("Weekly Timetable");
-        title.setFont(title.getFont().deriveFont(Font.BOLD, 20f));
+        title.setFont(Theme.FONT_HEADING.deriveFont(Theme.SIZE_HEADING));
+        title.setForeground(Theme.BRAND_BROWN);
         title.setHorizontalAlignment(SwingConstants.LEFT);
         
         JButton addBlockButton = new JButton("Add Block");
+        addBlockButton.setBackground(Color.WHITE);
+        addBlockButton.setForeground(Theme.BRAND_BROWN);
+        addBlockButton.setFocusPainted(false);
+        addBlockButton.setOpaque(true);
+        addBlockButton.setContentAreaFilled(true);
+        addBlockButton.setFont(Theme.FONT_BODY.deriveFont(16f));
+        addBlockButton.setBorder(BorderFactory.createCompoundBorder(
+            new LineBorder(Theme.BRAND_BLUE, 2, true),
+            BorderFactory.createEmptyBorder(6, 14, 6, 14)
+        ));
         addBlockButton.addActionListener(e -> showAddBlockDialog());
 
         JPanel headerPanel = new JPanel(new BorderLayout());
+        headerPanel.setOpaque(false);
+        headerPanel.setBorder(new javax.swing.border.EmptyBorder(4, 2, 4, 2));
         headerPanel.add(title, BorderLayout.WEST);
         headerPanel.add(addBlockButton, BorderLayout.EAST);
         add(headerPanel, BorderLayout.NORTH);
 
         JPanel grid = new JPanel(new GridLayout(TIME_SLOTS.length + 1, DAYS.length + 1));
-        grid.setBorder(BorderFactory.createLineBorder(new Color(190, 190, 190)));
+        grid.setBorder(BorderFactory.createLineBorder(GRID_BORDER_COLOR));
         grid.setBackground(Color.WHITE);
 
         grid.add(createHeaderCell("Time"));
@@ -84,16 +105,18 @@ public class TimetablePanel extends JPanel {
     private JLabel createHeaderCell(String text) {
         JLabel label = createBaseCell(text);
         label.setOpaque(true);
-        label.setBackground(new Color(236, 243, 252));
-        label.setFont(label.getFont().deriveFont(Font.BOLD));
+        label.setBackground(HEADER_BG_COLOR);
+        label.setForeground(Theme.BRAND_BROWN);
+        label.setFont(Theme.FONT_HEADING.deriveFont(16f));
         return label;
     }
 
     private JLabel createTimeCell(String text) {
         JLabel label = createBaseCell(text);
         label.setOpaque(true);
-        label.setBackground(new Color(250, 250, 250));
-        label.setFont(label.getFont().deriveFont(Font.BOLD));
+        label.setBackground(TIME_COL_BG_COLOR);
+        label.setForeground(Theme.BRAND_BROWN);
+        label.setFont(Theme.FONT_HEADING.deriveFont(16f));
         return label;
     }
 
@@ -103,6 +126,7 @@ public class TimetablePanel extends JPanel {
         label.setVerticalAlignment(SwingConstants.TOP);
         label.setHorizontalAlignment(SwingConstants.CENTER);
         label.setBorder(new MatteBorder(0, 0, 1, 1, GRID_LINE_COLOR));
+        label.setFont(Theme.FONT_BODY.deriveFont(15f));
         return label;
     }
 
@@ -117,10 +141,13 @@ public class TimetablePanel extends JPanel {
         Map<String, JCheckBox> dayCheckboxes = createDayCheckboxes();
         JComboBox<String> startField = new JComboBox<>(TIME_OPTIONS);
         JComboBox<String> endField = new JComboBox<>(TIME_OPTIONS);
+        JComboBox<String> colorField = new JComboBox<>(PRESET_COLORS.keySet().toArray(new String[0]));
+        JPanel colorPreview = createColorPreviewSwatch((String) colorField.getSelectedItem());
         javax.swing.JTextField typeField = new javax.swing.JTextField(16);
         endField.setSelectedIndex(Math.min(1, TIME_OPTIONS.length - 1));
+        colorField.addActionListener(e -> updateColorPreview(colorPreview, (String) colorField.getSelectedItem()));
 
-        JPanel formPanel = buildFormPanel(titleField, dayCheckboxes, startField, endField, typeField);
+        JPanel formPanel = buildFormPanel(titleField, dayCheckboxes, startField, endField, colorField, colorPreview, typeField);
 
         while (true) {
             int choice = JOptionPane.showConfirmDialog(
@@ -138,6 +165,7 @@ public class TimetablePanel extends JPanel {
             List<String> selectedDays = getSelectedDays(dayCheckboxes);
             String startInput = (String) startField.getSelectedItem();
             String endInput = (String) endField.getSelectedItem();
+            String colorName = (String) colorField.getSelectedItem();
             String type = typeField.getText().trim();
 
             String validationError = validateBlock(title, selectedDays, startInput, endInput);
@@ -148,8 +176,9 @@ public class TimetablePanel extends JPanel {
 
             LocalTime start = parseTimeFlexible(startInput);
             LocalTime end = parseTimeFlexible(endInput);
+            Color selectedColor = getColorByName(colorName);
             for (String day : selectedDays) {
-                blocks.add(new TimetableBlock(title, day, start, end, type));
+                blocks.add(new TimetableBlock(title, day, start, end, type, selectedColor));
             }
             refreshGrid();
             return;
@@ -161,20 +190,69 @@ public class TimetablePanel extends JPanel {
         Map<String, JCheckBox> dayCheckboxes,
         JComboBox<String> startField,
         JComboBox<String> endField,
+        JComboBox<String> colorField,
+        JPanel colorPreview,
         javax.swing.JTextField typeField
     ) {
         JPanel form = new JPanel(new GridBagLayout());
+        form.setBackground(PANEL_BG_COLOR);
         GridBagConstraints gbc = new GridBagConstraints();
         gbc.insets = new Insets(4, 4, 4, 4);
         gbc.fill = GridBagConstraints.HORIZONTAL;
         gbc.anchor = GridBagConstraints.WEST;
 
+        titleField.setFont(Theme.FONT_BODY.deriveFont(15f));
+        startField.setFont(Theme.FONT_BODY.deriveFont(15f));
+        endField.setFont(Theme.FONT_BODY.deriveFont(15f));
+        colorField.setFont(Theme.FONT_BODY.deriveFont(15f));
+        typeField.setFont(Theme.FONT_BODY.deriveFont(15f));
+
         addRow(form, gbc, 0, "Title / Course Code", titleField);
         addRow(form, gbc, 1, "Days", createDaySelectionPanel(dayCheckboxes));
         addRow(form, gbc, 2, "Start Time", startField);
         addRow(form, gbc, 3, "End Time", endField);
-        addRow(form, gbc, 4, "Type (Optional)", typeField);
+        addRow(form, gbc, 4, "Color", createColorPickerRow(colorField, colorPreview));
+        addRow(form, gbc, 5, "Type (Optional)", typeField);
         return form;
+    }
+
+    private static Map<String, Color> createPresetColors() {
+        Map<String, Color> colors = new LinkedHashMap<>();
+        colors.put("Blue", Theme.BLOCK_BLUE);
+        colors.put("Aqua", Theme.BLOCK_AQUA);
+        colors.put("Lemon", Theme.BLOCK_LEMON);
+        colors.put("Peach", Theme.BLOCK_PEACH);
+        colors.put("Pink", Theme.BLOCK_PINK);
+        colors.put("Lilac", Theme.BLOCK_LILAC);
+        return colors;
+    }
+
+    private JPanel createColorPickerRow(JComboBox<String> colorField, JPanel colorPreview) {
+        JPanel row = new JPanel(new BorderLayout(8, 0));
+        row.setOpaque(false);
+        row.add(colorField, BorderLayout.CENTER);
+        row.add(colorPreview, BorderLayout.EAST);
+        return row;
+    }
+
+    private JPanel createColorPreviewSwatch(String colorName) {
+        JPanel swatch = new JPanel();
+        swatch.setPreferredSize(new Dimension(28, 20));
+        swatch.setBorder(BorderFactory.createLineBorder(new Color(120, 120, 120)));
+        updateColorPreview(swatch, colorName);
+        return swatch;
+    }
+
+    private void updateColorPreview(JPanel swatch, String colorName) {
+        swatch.setBackground(getColorByName(colorName));
+    }
+
+    private Color getColorByName(String colorName) {
+        if (colorName == null) {
+            return BLOCK_FILL_COLOR;
+        }
+        Color color = PRESET_COLORS.get(colorName);
+        return color == null ? BLOCK_FILL_COLOR : color;
     }
 
     private static String[] createTimeOptions() {
@@ -208,7 +286,11 @@ public class TimetablePanel extends JPanel {
         JPanel dayPanel = new JPanel(new GridLayout(0, 2, 6, 2));
         dayPanel.setOpaque(false);
         for (String day : DAYS) {
-            dayPanel.add(dayCheckboxes.get(day));
+            JCheckBox checkBox = dayCheckboxes.get(day);
+            checkBox.setOpaque(false);
+            checkBox.setFont(Theme.FONT_BODY.deriveFont(15f));
+            checkBox.setForeground(Theme.BRAND_BROWN);
+            dayPanel.add(checkBox);
         }
         return dayPanel;
     }
@@ -228,7 +310,10 @@ public class TimetablePanel extends JPanel {
         gbc.gridx = 0;
         gbc.gridy = row;
         gbc.weightx = 0;
-        panel.add(new JLabel(label + ":"), gbc);
+        JLabel labelComponent = new JLabel(label + ":");
+        labelComponent.setFont(Theme.FONT_BODY.deriveFont(15f));
+        labelComponent.setForeground(Theme.BRAND_BROWN);
+        panel.add(labelComponent, gbc);
 
         gbc.gridx = 1;
         gbc.weightx = 1;
@@ -282,7 +367,7 @@ public class TimetablePanel extends JPanel {
                 double slotDurationSeconds = slotEnd.toSecondOfDay() - slotStart.toSecondOfDay();
                 double fillStart = (overlapStart.toSecondOfDay() - slotStart.toSecondOfDay()) / slotDurationSeconds;
                 double fillEnd = (overlapEnd.toSecondOfDay() - slotStart.toSecondOfDay()) / slotDurationSeconds;
-                cell.setFillRange(fillStart, fillEnd, BLOCK_FILL_COLOR);
+                cell.setFillRange(fillStart, fillEnd, block.color);
 
                 if (firstCoveredSlot) {
                     String optionalType = block.type.isBlank() ? "" : "<br/>" + escapeHtml(block.type);
@@ -342,13 +427,15 @@ public class TimetablePanel extends JPanel {
         private final LocalTime start;
         private final LocalTime end;
         private final String type;
+        private final Color color;
 
-        TimetableBlock(String title, String day, LocalTime start, LocalTime end, String type) {
+        TimetableBlock(String title, String day, LocalTime start, LocalTime end, String type, Color color) {
             this.title = title;
             this.day = day;
             this.start = start;
             this.end = end;
             this.type = type == null ? "" : type;
+            this.color = color == null ? BLOCK_FILL_COLOR : color;
         }
     }
 
