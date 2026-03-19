@@ -4,35 +4,45 @@ import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Font;
 import java.awt.Graphics;
+import java.awt.GridBagConstraints;
+import java.awt.GridBagLayout;
 import java.awt.GridLayout;
+import java.awt.Insets;
 import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 
 import javax.swing.BorderFactory;
+import javax.swing.JButton;
+import javax.swing.JCheckBox;
+import javax.swing.JComboBox;
 import javax.swing.JLabel;
+import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.SwingConstants;
+import javax.swing.border.Border;
 import javax.swing.border.MatteBorder;
-
-import com.coursely.model.SampleData;
-import com.coursely.model.Schedule;
-import com.coursely.model.Section;
 
 public class TimetablePanel extends JPanel {
     private static final String[] DAYS = {
         "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"
     };
 
-    private static final String[] TIME_SLOTS = {
-        "8:00 AM", "9:00 AM", "10:00 AM", "11:00 AM", "12:00 PM", "1:00 PM", "2:00 PM",
-        "3:00 PM", "4:00 PM", "5:00 PM", "6:00 PM"
-    };
+    private static final String[] TIME_SLOTS = createHourSlots();
+    private static final String[] TIME_OPTIONS = createTimeOptions();
 
     private static final DateTimeFormatter SLOT_FORMAT = DateTimeFormatter.ofPattern("h:mm a", Locale.ENGLISH);
+    private static final DateTimeFormatter DISPLAY_TIME_FORMAT = DateTimeFormatter.ofPattern("h:mm a", Locale.ENGLISH);
+    private static final Color GRID_LINE_COLOR = new Color(220, 220, 220);
+    private static final Color BLOCK_FILL_COLOR = new Color(219, 235, 255);
+    private final Map<String, TimetableBodyCell> bodyCells = new HashMap<>();
+    private final List<TimetableBlock> blocks = new ArrayList<>();
 
     public TimetablePanel() {
         setLayout(new BorderLayout(0, 10));
@@ -40,7 +50,14 @@ public class TimetablePanel extends JPanel {
         JLabel title = new JLabel("Weekly Timetable");
         title.setFont(title.getFont().deriveFont(Font.BOLD, 20f));
         title.setHorizontalAlignment(SwingConstants.LEFT);
-        add(title, BorderLayout.NORTH);
+        
+        JButton addBlockButton = new JButton("Add Block");
+        addBlockButton.addActionListener(e -> showAddBlockDialog());
+
+        JPanel headerPanel = new JPanel(new BorderLayout());
+        headerPanel.add(title, BorderLayout.WEST);
+        headerPanel.add(addBlockButton, BorderLayout.EAST);
+        add(headerPanel, BorderLayout.NORTH);
 
         JPanel grid = new JPanel(new GridLayout(TIME_SLOTS.length + 1, DAYS.length + 1));
         grid.setBorder(BorderFactory.createLineBorder(new Color(190, 190, 190)));
@@ -51,7 +68,6 @@ public class TimetablePanel extends JPanel {
             grid.add(createHeaderCell(day));
         }
 
-        Map<String, TimetableBodyCell> bodyCells = new HashMap<>();
         for (String timeSlot : TIME_SLOTS) {
             grid.add(createTimeCell(timeSlot));
             for (String day : DAYS) {
@@ -61,12 +77,8 @@ public class TimetablePanel extends JPanel {
             }
         }
 
-        populateWithSampleEntries(bodyCells, SampleData.createSampleSchedule());
         add(grid, BorderLayout.CENTER);
 
-        JLabel previewNote = new JLabel("Showing sample schedule blocks for UI preview.");
-        previewNote.setForeground(new Color(90, 90, 90));
-        add(previewNote, BorderLayout.SOUTH);
     }
 
     private JLabel createHeaderCell(String text) {
@@ -90,54 +102,202 @@ public class TimetablePanel extends JPanel {
         label.setBackground(Color.WHITE);
         label.setVerticalAlignment(SwingConstants.TOP);
         label.setHorizontalAlignment(SwingConstants.CENTER);
-        label.setBorder(new MatteBorder(0, 0, 1, 1, new Color(220, 220, 220)));
+        label.setBorder(new MatteBorder(0, 0, 1, 1, GRID_LINE_COLOR));
         return label;
     }
 
     private JLabel createBaseCell(String text) {
         JLabel label = new JLabel(text, SwingConstants.CENTER);
-        label.setBorder(new MatteBorder(0, 0, 1, 1, new Color(220, 220, 220)));
+        label.setBorder(new MatteBorder(0, 0, 1, 1, GRID_LINE_COLOR));
         return label;
     }
 
-    private void populateWithSampleEntries(Map<String, TimetableBodyCell> bodyCells, Schedule schedule) {
-        for (Section section : schedule.getSections()) {
-            String day = section.getTimeBlock().getDay();
-            LocalTime start = parseTimeFlexible(section.getTimeBlock().getStartTime());
-            LocalTime end = parseTimeFlexible(section.getTimeBlock().getEndTime());
-            if (start == null || end == null || !end.isAfter(start)) {
+    private void showAddBlockDialog() {
+        javax.swing.JTextField titleField = new javax.swing.JTextField(16);
+        Map<String, JCheckBox> dayCheckboxes = createDayCheckboxes();
+        JComboBox<String> startField = new JComboBox<>(TIME_OPTIONS);
+        JComboBox<String> endField = new JComboBox<>(TIME_OPTIONS);
+        javax.swing.JTextField typeField = new javax.swing.JTextField(16);
+        endField.setSelectedIndex(Math.min(1, TIME_OPTIONS.length - 1));
+
+        JPanel formPanel = buildFormPanel(titleField, dayCheckboxes, startField, endField, typeField);
+
+        while (true) {
+            int choice = JOptionPane.showConfirmDialog(
+                this,
+                formPanel,
+                "Add Timetable Block",
+                JOptionPane.OK_CANCEL_OPTION,
+                JOptionPane.PLAIN_MESSAGE
+            );
+            if (choice != JOptionPane.OK_OPTION) {
+                return;
+            }
+
+            String title = titleField.getText().trim();
+            List<String> selectedDays = getSelectedDays(dayCheckboxes);
+            String startInput = (String) startField.getSelectedItem();
+            String endInput = (String) endField.getSelectedItem();
+            String type = typeField.getText().trim();
+
+            String validationError = validateBlock(title, selectedDays, startInput, endInput);
+            if (validationError != null) {
+                JOptionPane.showMessageDialog(this, validationError, "Validation Error", JOptionPane.ERROR_MESSAGE);
                 continue;
             }
 
+            LocalTime start = parseTimeFlexible(startInput);
+            LocalTime end = parseTimeFlexible(endInput);
+            for (String day : selectedDays) {
+                blocks.add(new TimetableBlock(title, day, start, end, type));
+            }
+            refreshGrid();
+            return;
+        }
+    }
+
+    private JPanel buildFormPanel(
+        javax.swing.JTextField titleField,
+        Map<String, JCheckBox> dayCheckboxes,
+        JComboBox<String> startField,
+        JComboBox<String> endField,
+        javax.swing.JTextField typeField
+    ) {
+        JPanel form = new JPanel(new GridBagLayout());
+        GridBagConstraints gbc = new GridBagConstraints();
+        gbc.insets = new Insets(4, 4, 4, 4);
+        gbc.fill = GridBagConstraints.HORIZONTAL;
+        gbc.anchor = GridBagConstraints.WEST;
+
+        addRow(form, gbc, 0, "Title / Course Code", titleField);
+        addRow(form, gbc, 1, "Days", createDaySelectionPanel(dayCheckboxes));
+        addRow(form, gbc, 2, "Start Time", startField);
+        addRow(form, gbc, 3, "End Time", endField);
+        addRow(form, gbc, 4, "Type (Optional)", typeField);
+        return form;
+    }
+
+    private static String[] createTimeOptions() {
+        List<String> options = new ArrayList<>();
+        DateTimeFormatter dropdownTimeFormat = DateTimeFormatter.ofPattern("h:mm a", Locale.ENGLISH);
+        LocalTime current = LocalTime.of(8, 0);
+        LocalTime end = LocalTime.of(19, 0);
+        while (!current.isAfter(end)) {
+            options.add(current.format(dropdownTimeFormat));
+            current = current.plusMinutes(30);
+        }
+        return options.toArray(new String[0]);
+    }
+
+    private static String[] createHourSlots() {
+        return new String[] {
+            "8:00 AM", "9:00 AM", "10:00 AM", "11:00 AM", "12:00 PM", "1:00 PM", "2:00 PM",
+            "3:00 PM", "4:00 PM", "5:00 PM", "6:00 PM"
+        };
+    }
+
+    private Map<String, JCheckBox> createDayCheckboxes() {
+        Map<String, JCheckBox> checkboxes = new LinkedHashMap<>();
+        for (String day : DAYS) {
+            checkboxes.put(day, new JCheckBox(day));
+        }
+        return checkboxes;
+    }
+
+    private JPanel createDaySelectionPanel(Map<String, JCheckBox> dayCheckboxes) {
+        JPanel dayPanel = new JPanel(new GridLayout(0, 2, 6, 2));
+        dayPanel.setOpaque(false);
+        for (String day : DAYS) {
+            dayPanel.add(dayCheckboxes.get(day));
+        }
+        return dayPanel;
+    }
+
+    private List<String> getSelectedDays(Map<String, JCheckBox> dayCheckboxes) {
+        List<String> selectedDays = new ArrayList<>();
+        for (String day : DAYS) {
+            JCheckBox checkBox = dayCheckboxes.get(day);
+            if (checkBox != null && checkBox.isSelected()) {
+                selectedDays.add(day);
+            }
+        }
+        return selectedDays;
+    }
+
+    private void addRow(JPanel panel, GridBagConstraints gbc, int row, String label, java.awt.Component field) {
+        gbc.gridx = 0;
+        gbc.gridy = row;
+        gbc.weightx = 0;
+        panel.add(new JLabel(label + ":"), gbc);
+
+        gbc.gridx = 1;
+        gbc.weightx = 1;
+        panel.add(field, gbc);
+    }
+
+    private String validateBlock(String title, List<String> selectedDays, String startInput, String endInput) {
+        if (title.isBlank()) {
+            return "Title / Course Code is required.";
+        }
+        if (selectedDays.isEmpty()) {
+            return "Please select at least one day.";
+        }
+        if (selectedDays.size() > 2) {
+            return "Please select up to two days for this block.";
+        }
+        if (startInput == null || endInput == null || startInput.isBlank() || endInput.isBlank()) {
+            return "Start time and end time are required.";
+        }
+
+        LocalTime start = parseTimeFlexible(startInput);
+        LocalTime end = parseTimeFlexible(endInput);
+        if (start == null || end == null) {
+            return "Invalid time format. Use values like 9:00, 09:00, or 9:00 AM.";
+        }
+        if (!end.isAfter(start)) {
+            return "End time must be after start time.";
+        }
+        return null;
+    }
+
+    private void refreshGrid() {
+        clearGrid();
+        for (TimetableBlock block : blocks) {
             boolean firstCoveredSlot = true;
             for (String slotLabel : TIME_SLOTS) {
                 LocalTime slotStart = LocalTime.parse(slotLabel, SLOT_FORMAT);
                 LocalTime slotEnd = slotStart.plusHours(1);
 
-                LocalTime overlapStart = start.isAfter(slotStart) ? start : slotStart;
-                LocalTime overlapEnd = end.isBefore(slotEnd) ? end : slotEnd;
-                if (overlapStart.isBefore(overlapEnd)) {
-                    TimetableBodyCell targetCell = bodyCells.get(createCellKey(day, slotLabel));
-                    if (targetCell == null) {
-                        continue;
-                    }
+                LocalTime overlapStart = block.start.isAfter(slotStart) ? block.start : slotStart;
+                LocalTime overlapEnd = block.end.isBefore(slotEnd) ? block.end : slotEnd;
+                if (!overlapStart.isBefore(overlapEnd)) {
+                    continue;
+                }
 
-                    double fillStart = (overlapStart.toSecondOfDay() - slotStart.toSecondOfDay()) / 3600.0;
-                    double fillEnd = (overlapEnd.toSecondOfDay() - slotStart.toSecondOfDay()) / 3600.0;
-                    targetCell.setFillRange(fillStart, fillEnd, new Color(219, 235, 255));
+                TimetableBodyCell cell = bodyCells.get(createCellKey(block.day, slotLabel));
+                if (cell == null) {
+                    continue;
+                }
 
-                    if (firstCoveredSlot) {
-                        targetCell.setText(String.format(
-                            "<html><b>%s</b><br/>Sec %s<br/>%s-%s</html>",
-                            section.getCourse().getCourseCode(),
-                            section.getSectionNumber(),
-                            section.getTimeBlock().getStartTime(),
-                            section.getTimeBlock().getEndTime()
-                        ));
-                        firstCoveredSlot = false;
-                    }
+                double slotDurationSeconds = slotEnd.toSecondOfDay() - slotStart.toSecondOfDay();
+                double fillStart = (overlapStart.toSecondOfDay() - slotStart.toSecondOfDay()) / slotDurationSeconds;
+                double fillEnd = (overlapEnd.toSecondOfDay() - slotStart.toSecondOfDay()) / slotDurationSeconds;
+                cell.setFillRange(fillStart, fillEnd, BLOCK_FILL_COLOR);
+
+                if (firstCoveredSlot) {
+                    String optionalType = block.type.isBlank() ? "" : "<br/>" + escapeHtml(block.type);
+                    cell.setText("<html><b>" + escapeHtml(block.title) + "</b><br/>"
+                        + escapeHtml(formatRange(block.start, block.end)) + optionalType + "</html>");
+                    firstCoveredSlot = false;
                 }
             }
+        }
+    }
+
+    private void clearGrid() {
+        for (TimetableBodyCell cell : bodyCells.values()) {
+            cell.setText("");
+            cell.clearFill();
         }
     }
 
@@ -165,20 +325,57 @@ public class TimetablePanel extends JPanel {
         }
     }
 
+    private String formatRange(LocalTime start, LocalTime end) {
+        return start.format(DISPLAY_TIME_FORMAT) + " - " + end.format(DISPLAY_TIME_FORMAT);
+    }
+
+    private String escapeHtml(String value) {
+        return value
+            .replace("&", "&amp;")
+            .replace("<", "&lt;")
+            .replace(">", "&gt;");
+    }
+
+    private static class TimetableBlock {
+        private final String title;
+        private final String day;
+        private final LocalTime start;
+        private final LocalTime end;
+        private final String type;
+
+        TimetableBlock(String title, String day, LocalTime start, LocalTime end, String type) {
+            this.title = title;
+            this.day = day;
+            this.start = start;
+            this.end = end;
+            this.type = type == null ? "" : type;
+        }
+    }
+
     private static class TimetableBodyCell extends JLabel {
         private double fillStartFraction = 0;
         private double fillEndFraction = 0;
-        private Color fillColor = new Color(219, 235, 255);
+        private Color fillColor = BLOCK_FILL_COLOR;
+        private final Border defaultBorder = new MatteBorder(0, 0, 1, 1, GRID_LINE_COLOR);
 
         TimetableBodyCell() {
             super("");
             setOpaque(false);
+            setBorder(defaultBorder);
         }
 
         void setFillRange(double startFraction, double endFraction, Color color) {
             fillStartFraction = clamp(startFraction);
             fillEndFraction = clamp(endFraction);
             fillColor = color;
+            setBorder(new MatteBorder(0, 0, 1, 1, color));
+            repaint();
+        }
+
+        void clearFill() {
+            fillStartFraction = 0;
+            fillEndFraction = 0;
+            setBorder(defaultBorder);
             repaint();
         }
 
