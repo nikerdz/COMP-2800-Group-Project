@@ -315,7 +315,6 @@ public final class BlockDialog {
         if (courseName.isBlank()) return "Course name is required.";
         if (sectionCode.isBlank()) return "Section code is required.";
         if (selectedDays.isEmpty()) return "Please select at least one day.";
-        if (selectedDays.size() > 2) return "Please select up to two days for this block.";
         if (startInput == null || endInput == null || startInput.isBlank() || endInput.isBlank()) {
             return "Start time and end time are required.";
         }
