@@ -13,7 +13,7 @@ public class MainFrame extends JFrame {
         super("Coursely - Plan your week with clarity!");
         setIconImage(ResourceUtils.loadImage("/images/logo3.png"));
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        setSize(1100, 700);
+        setSize(1280, 800);
         setLocationRelativeTo(null);
         setBackground(Theme.BRAND_OFFWHITE);
 
@@ -41,7 +41,7 @@ public class MainFrame extends JFrame {
         logoMark.setBorder(new EmptyBorder(0, 0, 0, 6));
 
         brandLeft.add(logoMark);
-        header.add(brandLeft, BorderLayout.CENTER);
+        header.add(brandLeft, BorderLayout.WEST);
 
         return header;
     }
