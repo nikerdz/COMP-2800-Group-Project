@@ -10,7 +10,7 @@ import javax.swing.border.EmptyBorder;
 
 public class MainFrame extends JFrame {
     public MainFrame() {
-        super("Coursely - Plan your week with clarity");
+        super("Coursely - Plan your week with clarity!");
         setIconImage(ResourceUtils.loadImage("/images/logo3.png"));
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setSize(1100, 700);
