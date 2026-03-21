@@ -21,22 +21,25 @@ public class BlockView extends JPanel {
 
     private final Section section;
     private final TimeBlock timeBlock;
+    private final Color baseColor;
 
     public BlockView(
             Section section,
             TimeBlock timeBlock,
             String courseCode,
             boolean selected,
+            boolean conflicted,
             Consumer<String> onSelectSection,
             Consumer<String> onEditSection,
             Consumer<String> onDeleteSection
     ) {
         this.section = section;
         this.timeBlock = timeBlock;
+        this.baseColor = section.getColor() == null ? Theme.BLOCK_BLUE : section.getColor();
 
         setLayout(new BorderLayout());
         setOpaque(true);
-        setBackground(section.getColor() == null ? Theme.BLOCK_BLUE : section.getColor());
+        setBackground(baseColor);
 
         JPanel textPanel = new JPanel(new GridLayout(0, 1, 0, 2));
         textPanel.setOpaque(false);
@@ -66,7 +69,7 @@ public class BlockView extends JPanel {
         textPanel.add(instructorLocationLabel);
 
         add(textPanel, BorderLayout.NORTH);
-        setSelected(selected);
+        applyVisualState(selected, conflicted);
 
         MouseAdapter clickHandler = new MouseAdapter() {
             @Override
@@ -99,12 +102,29 @@ public class BlockView extends JPanel {
     }
 
     public void setSelected(boolean selected) {
-        if (selected) {
+        applyVisualState(selected, false);
+    }
+
+    private void applyVisualState(boolean selected, boolean conflicted) {
+        if (conflicted) {
+            setBorder(BorderFactory.createLineBorder(new Color(214, 76, 76), 2, true));
+            setBackground(mix(baseColor, new Color(255, 225, 225), 0.55));
+        } else if (selected) {
             setBorder(BorderFactory.createLineBorder(Theme.BRAND_BLUE, 1, true));
+            setBackground(baseColor);
         } else {
             setBorder(BorderFactory.createLineBorder(new Color(160, 180, 205), 1, true));
+            setBackground(baseColor);
         }
         repaint();
+    }
+
+    private Color mix(Color a, Color b, double ratio) {
+        double r = Math.max(0, Math.min(1, ratio));
+        int red = (int) Math.round(a.getRed() * (1 - r) + b.getRed() * r);
+        int green = (int) Math.round(a.getGreen() * (1 - r) + b.getGreen() * r);
+        int blue = (int) Math.round(a.getBlue() * (1 - r) + b.getBlue() * r);
+        return new Color(red, green, blue);
     }
 
     private void showPopup(MouseEvent e, Consumer<String> onEditSection, Consumer<String> onDeleteSection) {

@@ -24,6 +24,7 @@ public class TimetableBlockLayer extends JPanel {
     private final Supplier<List<Section>> sectionsSupplier;
     private final java.util.function.Function<String, String> displayTypeSupplier;
     private final Predicate<String> selectedChecker;
+    private final Predicate<String> conflictChecker;
     private final Consumer<String> onSelectSection;
     private final Runnable onClearSelection;
     private final Consumer<String> onEditSection;
@@ -35,6 +36,7 @@ public class TimetableBlockLayer extends JPanel {
             Supplier<List<Section>> sectionsSupplier,
             java.util.function.Function<String, String> displayTypeSupplier,
             Predicate<String> selectedChecker,
+            Predicate<String> conflictChecker,
             Consumer<String> onSelectSection,
             Runnable onClearSelection,
             Consumer<String> onEditSection,
@@ -45,6 +47,7 @@ public class TimetableBlockLayer extends JPanel {
         this.sectionsSupplier = sectionsSupplier;
         this.displayTypeSupplier = displayTypeSupplier;
         this.selectedChecker = selectedChecker;
+        this.conflictChecker = conflictChecker;
         this.onSelectSection = onSelectSection;
         this.onClearSelection = onClearSelection;
         this.onEditSection = onEditSection;
@@ -74,6 +77,7 @@ public class TimetableBlockLayer extends JPanel {
                         timeBlock,
                         displayTypeSupplier.apply(section.getUiId()),
                         selectedChecker.test(section.getUiId()),
+                        conflictChecker.test(section.getUiId()),
                         onSelectSection,
                         onEditSection,
                         onDeleteSection

@@ -6,10 +6,12 @@ import java.awt.Insets;
 import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
 
 import javax.swing.BorderFactory;
 import javax.swing.JButton;
@@ -49,6 +51,7 @@ public class TimetablePanel extends JPanel {
     private final Map<String, String> courseCodeByUiId = new LinkedHashMap<>();
 
     private String selectedSectionUiId;
+    private final Set<String> conflictSectionUiIds = new HashSet<>();
 
     private JLabel timetableTitleLabel;
     private TimetableGridPanel gridPanel;
@@ -125,6 +128,7 @@ public class TimetablePanel extends JPanel {
                 () -> schedule.getSections(),
                 this::getCourseCodeForSection,
                 this::isSelected,
+                this::isConflictHighlighted,
                 this::selectSection,
                 this::clearSelection,
                 this::editBlock,
@@ -148,10 +152,12 @@ public class TimetablePanel extends JPanel {
                 DAYS
         );
         if (data == null) return;
+        if (showConflictFeedbackIfNeeded(data, null)) return;
 
         ensureScheduleHasBasicInfo();
         Section savedSection = timetableService.addBlockToSchedule(schedule, data);
 
+        clearConflictHighlights();
         courseCodeByUiId.put(savedSection.getUiId(), data.courseCode);
         selectedSectionUiId = savedSection.getUiId();
 
@@ -195,9 +201,11 @@ public class TimetablePanel extends JPanel {
 
         BlockFormData updated = BlockDialog.show(this, "Edit Timetable Block", initial, DAYS);
         if (updated == null) return;
+        if (showConflictFeedbackIfNeeded(updated, sectionUiId)) return;
 
         ensureScheduleHasBasicInfo();
         timetableService.updateBlock(section, updated, schedule);
+        clearConflictHighlights();
         courseCodeByUiId.put(sectionUiId, updated.courseCode);
         refreshView();
     }
@@ -225,6 +233,7 @@ public class TimetablePanel extends JPanel {
         if (sectionUiId.equals(selectedSectionUiId)) {
             selectedSectionUiId = null;
         }
+        clearConflictHighlights();
 
         refreshView();
     }
@@ -243,6 +252,10 @@ public class TimetablePanel extends JPanel {
         return sectionUiId != null && sectionUiId.equals(selectedSectionUiId);
     }
 
+    private boolean isConflictHighlighted(String sectionUiId) {
+        return sectionUiId != null && conflictSectionUiIds.contains(sectionUiId);
+    }
+
     private String getCourseCodeForSection(String sectionUiId) {
         return courseCodeByUiId.getOrDefault(sectionUiId, "");
     }
@@ -252,6 +265,52 @@ public class TimetablePanel extends JPanel {
         updateDetailsPanel();
         revalidate();
         repaint();
+    }
+
+    private boolean showConflictFeedbackIfNeeded(BlockFormData data, String sectionUiIdToIgnore) {
+        Section candidate = new Section(
+                null,
+                null,
+                data.sectionCode == null || data.sectionCode.isBlank() ? data.courseCode : data.sectionCode,
+                BlockDialog.parseSectionTypeOrDefault(data.sectionType),
+                data.instructor,
+                data.location,
+                data.color
+        );
+        for (String day : data.days) {
+            candidate.addTimeBlock(new TimeBlock(day, data.start, data.end));
+        }
+
+        List<Section> conflicts = schedule.findConflicts(candidate);
+        if (sectionUiIdToIgnore != null && !sectionUiIdToIgnore.isBlank()) {
+            conflicts.removeIf(s -> sectionUiIdToIgnore.equals(s.getUiId()));
+        }
+
+        if (conflicts.isEmpty()) {
+            clearConflictHighlights();
+            return false;
+        }
+
+        conflictSectionUiIds.clear();
+        for (Section conflict : conflicts) {
+            conflictSectionUiIds.add(conflict.getUiId());
+        }
+        selectedSectionUiId = conflicts.get(0).getUiId();
+        refreshView();
+
+        JOptionPane.showMessageDialog(
+                this,
+                "Time conflict detected. This block overlaps an existing block.\n"
+                        + "Please adjust the day/time and try again.",
+                "Scheduling Conflict",
+                JOptionPane.WARNING_MESSAGE
+        );
+        return true;
+    }
+
+    private void clearConflictHighlights() {
+        if (conflictSectionUiIds.isEmpty()) return;
+        conflictSectionUiIds.clear();
     }
 
     private void updateDetailsPanel() {
