@@ -12,33 +12,59 @@ Coursely is a Java-based weekly course planner and timetable builder designed to
 ## Course
 COMP 2800 – Software Development
 
-## Current Tech Stack
+## Tech Stack
 - Java
 - Java Swing
 - SQLite
 - JDBC
 
-## Current Project Status
-Sprint 1: project setup, data modeling, UI prototype, and database schema design.
+## Current Project Status (Sprint 2)
+We are currently in **Sprint 2 (Mar 16 – Mar 30)**. Sprint 1 established the project foundation (repo structure, initial UI skeleton, database schema + initialization). Sprint 2 focuses on making the application more functional and polished, including timetable block editing and usability improvements.
+
+### Sprint 2 Focus
+- Create/edit/remove timetable blocks (interactive controls)
+- Color-coded blocks (preset palette)
+- Conflict feedback (time overlap detection)
+- Save/load timetables locally (multiple saved schedules by title)
+- Export timetable as PNG (if time allows)
+- Branding + UI theme (logo, fonts, color scheme)
 
 ## Project Structure
-- `docs/` – planning notes, diagrams, and supporting documentation
-- `database/` – SQL schema and database-related files
+- `docs/` – planning notes, sprint reports, diagrams, and supporting documentation
+- `database/` – SQL schema and database design assets (ER diagram)
+- `data/` – local database file created at runtime (ignored by Git)
 - `src/main/java/` – main application source code
-- `src/main/resources/` – non-code resources used by the app
-- `src/test/java/` – test source files
+- `src/main/resources/` – app resources (images, fonts, etc.)
+- `src/test/java/` – test source files (unit/integration tests as needed)
+- `lib/` – local JAR dependencies (e.g., SQLite JDBC driver)
 
 ## How to Run
-Right now, the project contains the initial Java structure and starter files.
-Run `App.java` from the `com.coursely` package in your IDE.
+1. Open the project in your IDE (VS Code / IntelliJ).
+2. Ensure the SQLite JDBC JAR is available (see `lib/` and VS Code referenced libraries settings if applicable).
+3. Run `App.java` from the `com.coursely` package.
+
+On startup, the app initializes the SQLite database using `database/schema.sql` and creates `data/coursely.db` if it does not exist.
 
 ## Branch Workflow
-Use feature branches for development and merge into `main` after review.
+Use feature branches for development and merge into `main` via Pull Request after review.
 
-Example branch names:
-- `feature/ui-main-frame`
-- `feature/models`
-- `feature/database-setup`
+**Branch naming:**
+- `feature/<short-description>`
+- `fix/<short-description>`
+- `docs/<short-description>`
 
-## Sprint 1 Goal
-Establish the technical foundation of Coursely by creating the project structure, initial database schema, core scheduling models, and a basic weekly timetable UI prototype.
+Examples:
+- `feature/block-edit-delete`
+- `feature/schedule-save-load`
+- `feature/ui-theme-branding`
+- `fix/db-init`
+- `docs/sprint2-update`
+
+**Commit messages:**
+Use short, descriptive messages starting with a verb:
+- `Add timetable block edit/delete actions`
+- `Implement schedule save/load to SQLite`
+- `Apply branding theme and logo assets`
+
+## Sprint 2 Goal
+Deliver a functional, polished timetable builder where users can create, edit, and remove blocks, see them clearly on the weekly grid (with colors), and begin saving/loading schedules locally.
