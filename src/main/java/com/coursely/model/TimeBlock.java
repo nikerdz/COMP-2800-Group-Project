@@ -5,34 +5,60 @@ import java.util.Objects;
 
 public class TimeBlock {
 
-    private String day;          // "Monday", "Tuesday", etc.
-    private LocalTime startTime; // 08:00
-    private LocalTime endTime;   // 09:30
+    // DB fields
+    private Integer timeBlockId; // null until saved/loaded
+    private Integer sectionId;   // null until saved/loaded
 
-    public TimeBlock(String day, LocalTime startTime, LocalTime endTime) {
-        this.day = Objects.requireNonNull(day);
+    private String dayOfWeek;    // Must match schema: Monday...Sunday
+    private LocalTime startTime;
+    private LocalTime endTime;
+
+    public TimeBlock(String dayOfWeek, LocalTime startTime, LocalTime endTime) {
+        this(null, null, dayOfWeek, startTime, endTime);
+    }
+
+    public TimeBlock(Integer timeBlockId, Integer sectionId, String dayOfWeek, LocalTime startTime, LocalTime endTime) {
+        this.timeBlockId = timeBlockId;
+        this.sectionId = sectionId;
+        this.dayOfWeek = Objects.requireNonNull(dayOfWeek);
         this.startTime = Objects.requireNonNull(startTime);
         this.endTime = Objects.requireNonNull(endTime);
     }
 
-    public String getDay() {
-        return day;
+    public Integer getTimeBlockId() {
+        return timeBlockId;
+    }
+
+    public void setTimeBlockId(Integer timeBlockId) {
+        this.timeBlockId = timeBlockId;
+    }
+
+    public Integer getSectionId() {
+        return sectionId;
+    }
+
+    public void setSectionId(Integer sectionId) {
+        this.sectionId = sectionId;
+    }
+
+    public String getDayOfWeek() {
+        return dayOfWeek;
+    }
+
+    public void setDayOfWeek(String dayOfWeek) {
+        this.dayOfWeek = Objects.requireNonNull(dayOfWeek);
     }
 
     public LocalTime getStartTime() {
         return startTime;
     }
 
-    public LocalTime getEndTime() {
-        return endTime;
-    }
-
-    public void setDay(String day) {
-        this.day = Objects.requireNonNull(day);
-    }
-
     public void setStartTime(LocalTime startTime) {
         this.startTime = Objects.requireNonNull(startTime);
+    }
+
+    public LocalTime getEndTime() {
+        return endTime;
     }
 
     public void setEndTime(LocalTime endTime) {
@@ -40,13 +66,12 @@ public class TimeBlock {
     }
 
     public boolean overlaps(TimeBlock other) {
-        if (!this.day.equals(other.day)) return false;
-        // overlap if start < other.end AND other.start < end
+        if (!this.dayOfWeek.equals(other.dayOfWeek)) return false;
         return this.startTime.isBefore(other.endTime) && other.startTime.isBefore(this.endTime);
     }
 
     @Override
     public String toString() {
-        return day + " " + startTime + " - " + endTime;
+        return dayOfWeek + " " + startTime + " - " + endTime;
     }
 }
