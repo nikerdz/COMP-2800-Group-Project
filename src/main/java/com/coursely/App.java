@@ -6,6 +6,7 @@ import javax.swing.UIManager;
 import com.coursely.db.DatabaseInitializer;
 import com.coursely.db.DatabaseManager;
 import com.coursely.ui.MainFrame;
+import com.coursely.ui.Theme;
 
 public class App {
     public static void main(String[] args) {
@@ -29,6 +30,14 @@ public class App {
             try {
                 UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
             } catch (Exception ignored) { } // Fall back to default look and feel if the system one is unavailable.
+
+            UIManager.put("Label.font", Theme.FONT_BODY);
+            UIManager.put("Button.font", Theme.FONT_BODY);
+            UIManager.put("ComboBox.font", Theme.FONT_BODY);
+            UIManager.put("TextField.font", Theme.FONT_BODY);
+            UIManager.put("CheckBox.font", Theme.FONT_BODY);
+            UIManager.put("OptionPane.messageFont", Theme.FONT_BODY);
+            UIManager.put("OptionPane.buttonFont", Theme.FONT_BODY);
 
             MainFrame frame = new MainFrame();
             frame.setVisible(true);

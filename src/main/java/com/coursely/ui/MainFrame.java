@@ -1,21 +1,21 @@
 package com.coursely.ui;
 
 import java.awt.BorderLayout;
-import java.awt.Color;
 import java.awt.FlowLayout;
 
 import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
-import javax.swing.SwingConstants;
 import javax.swing.border.EmptyBorder;
 
 public class MainFrame extends JFrame {
     public MainFrame() {
-        super("Coursely - Weekly Timetable");
+        super("Coursely - Plan your week with clarity");
+        setIconImage(ResourceUtils.loadImage("/images/logo3.png"));
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setSize(1100, 700);
         setLocationRelativeTo(null);
+        setBackground(Theme.BRAND_OFFWHITE);
 
         JPanel content = new JPanel(new BorderLayout(0, 14));
         content.setBackground(Theme.BRAND_OFFWHITE);
@@ -28,35 +28,20 @@ public class MainFrame extends JFrame {
 
     private JPanel createBrandHeader() {
         JPanel header = new JPanel(new BorderLayout());
-        header.setOpaque(false);
+        header.setBackground(Theme.BRAND_OFFWHITE);
+        header.setOpaque(true);
         header.setBorder(new EmptyBorder(4, 0, 8, 0));
 
-        JPanel brandLeft = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 0));
-        brandLeft.setBackground(Theme.BRAND_BLUE);
+        JPanel brandLeft = new JPanel(new FlowLayout(FlowLayout.CENTER, 10, 0));
+        brandLeft.setOpaque(true);
+        brandLeft.setBackground(Theme.BRAND_OFFWHITE);
         brandLeft.setBorder(new EmptyBorder(8, 12, 8, 12));
 
-        JLabel logoMark = new JLabel("C", SwingConstants.CENTER);
-        logoMark.setOpaque(true);
-        logoMark.setBackground(Theme.BRAND_OFFWHITE);
-        logoMark.setForeground(Theme.BRAND_BLUE.darker());
-        logoMark.setFont(Theme.FONT_HEADING.deriveFont(18f));
-        logoMark.setBorder(new EmptyBorder(3, 10, 3, 10));
-
-        JLabel brandText = new JLabel("Coursely");
-        brandText.setForeground(Theme.BRAND_OFFWHITE);
-        brandText.setFont(Theme.FONT_HEADING.deriveFont(24f));
+        JLabel logoMark = new JLabel(ResourceUtils.loadIconKeepAspect("/images/logo2.png", 64));
+        logoMark.setBorder(new EmptyBorder(0, 0, 0, 6));
 
         brandLeft.add(logoMark);
-        brandLeft.add(brandText);
-        header.add(brandLeft, BorderLayout.WEST);
-
-        JLabel tagline = new JLabel("Plan your week with clarity");
-        tagline.setOpaque(true);
-        tagline.setBackground(Theme.BRAND_BLUE);
-        tagline.setForeground(new Color(232, 248, 255));
-        tagline.setFont(Theme.FONT_BODY.deriveFont(16f));
-        tagline.setBorder(new EmptyBorder(8, 12, 8, 12));
-        header.add(tagline, BorderLayout.EAST);
+        header.add(brandLeft, BorderLayout.CENTER);
 
         return header;
     }
