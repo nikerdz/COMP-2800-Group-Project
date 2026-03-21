@@ -25,7 +25,7 @@ public class BlockView extends JPanel {
     public BlockView(
             Section section,
             TimeBlock timeBlock,
-            String displayType,
+            String courseCode,
             boolean selected,
             Consumer<String> onSelectSection,
             Consumer<String> onEditSection,
@@ -42,26 +42,28 @@ public class BlockView extends JPanel {
         textPanel.setOpaque(false);
         textPanel.setBorder(new EmptyBorder(4, 6, 4, 6));
 
-        JLabel titleLabel = new JLabel(section.getSectionCode());
-        titleLabel.setFont(Theme.FONT_BODY.deriveFont(20f));
-        titleLabel.setForeground(Color.BLACK);
+        JLabel courseCodeLabel = new JLabel(
+                (courseCode == null || courseCode.isBlank()) ? "Course" : courseCode
+        );
+        courseCodeLabel.setFont(Theme.FONT_BODY.deriveFont(13f));
+        courseCodeLabel.setForeground(Color.BLACK);
 
-        JLabel timeLabel = new JLabel(TimetablePanel.formatRange(
-                timeBlock.getStartTime(),
-                timeBlock.getEndTime()
-        ));
-        timeLabel.setFont(Theme.FONT_BODY.deriveFont(15f));
-        timeLabel.setForeground(Color.BLACK);
+        String sectionCodeText = safeValue(section.getSectionCode(), "Section");
+        JLabel sectionCodeLabel = new JLabel(sectionCodeText);
+        sectionCodeLabel.setFont(Theme.FONT_BODY.deriveFont(11f));
+        sectionCodeLabel.setForeground(Color.BLACK);
 
-        textPanel.add(titleLabel);
-        textPanel.add(timeLabel);
+        String instructorLocationText = buildInstructorLocationText(
+                section.getInstructor(),
+                section.getLocation()
+        );
+        JLabel instructorLocationLabel = new JLabel(instructorLocationText);
+        instructorLocationLabel.setFont(Theme.FONT_BODY.deriveFont(10f));
+        instructorLocationLabel.setForeground(Color.BLACK);
 
-        if (displayType != null && !displayType.isBlank()) {
-            JLabel typeLabel = new JLabel(displayType);
-            typeLabel.setFont(Theme.FONT_BODY.deriveFont(10f));
-            typeLabel.setForeground(Color.BLACK);
-            textPanel.add(typeLabel);
-        }
+        textPanel.add(courseCodeLabel);
+        textPanel.add(sectionCodeLabel);
+        textPanel.add(instructorLocationLabel);
 
         add(textPanel, BorderLayout.NORTH);
         setSelected(selected);
@@ -87,8 +89,9 @@ public class BlockView extends JPanel {
 
         addMouseListener(clickHandler);
         textPanel.addMouseListener(clickHandler);
-        titleLabel.addMouseListener(clickHandler);
-        timeLabel.addMouseListener(clickHandler);
+        courseCodeLabel.addMouseListener(clickHandler);
+        sectionCodeLabel.addMouseListener(clickHandler);
+        instructorLocationLabel.addMouseListener(clickHandler);
     }
 
     public TimeBlock getTimeBlock() {
@@ -99,7 +102,7 @@ public class BlockView extends JPanel {
         if (selected) {
             setBorder(BorderFactory.createLineBorder(Theme.BRAND_BLUE, 1, true));
         } else {
-            setBorder(BorderFactory.createLineBorder(new Color(80, 110, 150), 1, true));
+            setBorder(BorderFactory.createLineBorder(new Color(160, 180, 205), 1, true));
         }
         repaint();
     }
@@ -120,5 +123,25 @@ public class BlockView extends JPanel {
 
     private boolean isRightClick(MouseEvent e) {
         return e.getButton() == MouseEvent.BUTTON3 || e.isPopupTrigger();
+    }
+
+    private String buildInstructorLocationText(String instructor, String location) {
+        boolean hasInstructor = instructor != null && !instructor.isBlank();
+        boolean hasLocation = location != null && !location.isBlank();
+
+        if (hasInstructor && hasLocation) {
+            return instructor + " • " + location;
+        }
+        if (hasInstructor) {
+            return instructor;
+        }
+        if (hasLocation) {
+            return location;
+        }
+        return " ";
+    }
+
+    private String safeValue(String value, String fallback) {
+        return (value == null || value.isBlank()) ? fallback : value;
     }
 }

@@ -18,8 +18,11 @@ import com.coursely.model.TimeBlock;
 
 public class SectionDetailsPanel extends JPanel {
 
-    private final JLabel titleLabel = new JLabel();
+    private final JLabel courseCodeLabel = new JLabel();
+    private final JLabel sectionCodeLabel = new JLabel();
     private final JLabel typeLabel = new JLabel();
+    private final JLabel instructorLabel = new JLabel();
+    private final JLabel locationLabel = new JLabel();
     private final JLabel daysLabel = new JLabel();
     private final JLabel timesLabel = new JLabel();
 
@@ -37,20 +40,32 @@ public class SectionDetailsPanel extends JPanel {
         JPanel infoPanel = new JPanel(new GridLayout(0, 1, 0, 8));
         infoPanel.setOpaque(false);
 
-        titleLabel.setFont(Theme.FONT_HEADING.deriveFont(18f));
-        titleLabel.setForeground(Theme.BRAND_BROWN);
+        courseCodeLabel.setFont(Theme.FONT_HEADING.deriveFont(18f));
+        courseCodeLabel.setForeground(Theme.BRAND_BROWN);
 
-        typeLabel.setFont(Theme.FONT_BODY.deriveFont(25f));
+        sectionCodeLabel.setFont(Theme.FONT_BODY.deriveFont(15f));
+        sectionCodeLabel.setForeground(Theme.BRAND_BROWN);
+
+        typeLabel.setFont(Theme.FONT_BODY.deriveFont(14f));
         typeLabel.setForeground(Theme.BRAND_BROWN);
 
-        daysLabel.setFont(Theme.FONT_BODY.deriveFont(25f));
+        instructorLabel.setFont(Theme.FONT_BODY.deriveFont(14f));
+        instructorLabel.setForeground(Theme.BRAND_BROWN);
+
+        locationLabel.setFont(Theme.FONT_BODY.deriveFont(14f));
+        locationLabel.setForeground(Theme.BRAND_BROWN);
+
+        daysLabel.setFont(Theme.FONT_BODY.deriveFont(14f));
         daysLabel.setForeground(Theme.BRAND_BROWN);
 
-        timesLabel.setFont(Theme.FONT_BODY.deriveFont(25f));
+        timesLabel.setFont(Theme.FONT_BODY.deriveFont(14f));
         timesLabel.setForeground(Theme.BRAND_BROWN);
 
-        infoPanel.add(titleLabel);
+        infoPanel.add(courseCodeLabel);
+        infoPanel.add(sectionCodeLabel);
         infoPanel.add(typeLabel);
+        infoPanel.add(instructorLabel);
+        infoPanel.add(locationLabel);
         infoPanel.add(daysLabel);
         infoPanel.add(timesLabel);
 
@@ -79,15 +94,16 @@ public class SectionDetailsPanel extends JPanel {
         add(buttonPanel, BorderLayout.SOUTH);
     }
 
-    public void bind(Section section, String displayType) {
+    public void bind(Section section, String courseCode) {
         currentUiId = section.getUiId();
 
-        titleLabel.setText(section.getSectionCode());
-
-        String resolvedType = (displayType == null || displayType.isBlank())
-                ? section.getSectionType().name()
-                : displayType;
-        typeLabel.setText("Type: " + resolvedType);
+        courseCodeLabel.setText(
+                (courseCode == null || courseCode.isBlank()) ? "Course" : courseCode
+        );
+        sectionCodeLabel.setText("Section: " + safeValue(section.getSectionCode(), "N/A"));
+        typeLabel.setText("Type: " + safeValue(enumName(section), "N/A"));
+        instructorLabel.setText("Instructor: " + safeValue(section.getInstructor(), "N/A"));
+        locationLabel.setText("Location: " + safeValue(section.getLocation(), "N/A"));
 
         List<String> days = new ArrayList<>();
         List<String> times = new ArrayList<>();
@@ -98,8 +114,10 @@ public class SectionDetailsPanel extends JPanel {
                     TimetablePanel.formatRange(tb.getStartTime(), tb.getEndTime()));
         }
 
-        daysLabel.setText("Days: " + String.join(", ", days));
-        timesLabel.setText("<html>Times:<br/>" + String.join("<br/>", times) + "</html>");
+        daysLabel.setText("Days: " + (days.isEmpty() ? "N/A" : String.join(", ", days)));
+        timesLabel.setText(
+                "<html>Times:<br/>" + (times.isEmpty() ? "N/A" : String.join("<br/>", times)) + "</html>"
+        );
     }
 
     private void styleActionButton(JButton button) {
@@ -108,10 +126,18 @@ public class SectionDetailsPanel extends JPanel {
         button.setFocusPainted(false);
         button.setOpaque(true);
         button.setContentAreaFilled(true);
-        button.setFont(Theme.FONT_BODY.deriveFont(25f));
+        button.setFont(Theme.FONT_BODY.deriveFont(16f));
         button.setBorder(BorderFactory.createCompoundBorder(
                 new LineBorder(Theme.BRAND_BLUE, 2, true),
                 BorderFactory.createEmptyBorder(6, 10, 6, 10)
         ));
+    }
+
+    private String safeValue(String value, String fallback) {
+        return (value == null || value.isBlank()) ? fallback : value;
+    }
+
+    private String enumName(Section section) {
+        return section.getSectionType() == null ? null : section.getSectionType().name();
     }
 }

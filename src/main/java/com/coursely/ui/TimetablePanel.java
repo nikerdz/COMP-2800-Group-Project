@@ -33,7 +33,9 @@ public class TimetablePanel extends JPanel {
     private static final Color PANEL_BG_COLOR = Theme.BRAND_OFFWHITE;
 
     private final Schedule schedule = new Schedule();
-    private final Map<String, String> displayTypeByUiId = new LinkedHashMap<>();
+
+    // Temporary UI-only mapping until Course objects / DB wiring are integrated.
+    private final Map<String, String> courseCodeByUiId = new LinkedHashMap<>();
 
     private String selectedSectionUiId;
 
@@ -110,7 +112,7 @@ public class TimetablePanel extends JPanel {
                 DAYS,
                 TIME_SLOTS,
                 () -> schedule.getSections(),
-                this::getDisplayTypeForSection,
+                this::getCourseCodeForSection,
                 this::isSelected,
                 this::selectSection,
                 this::clearSelection,
@@ -139,10 +141,10 @@ public class TimetablePanel extends JPanel {
         Section section = new Section(
                 null,
                 null,
-                data.title,
-                BlockDialog.parseSectionTypeOrDefault(data.typeText),
-                null,
-                null,
+                data.sectionCode,
+                BlockDialog.parseSectionTypeOrDefault(data.sectionType),
+                data.instructor,
+                data.location,
                 data.color
         );
 
@@ -151,9 +153,11 @@ public class TimetablePanel extends JPanel {
         }
 
         schedule.addSection(section);
-        displayTypeByUiId.put(section.getUiId(), data.typeText);
-        selectedSectionUiId = section.getUiId();
 
+        // Temporary until full Course model / DB wiring is in place.
+        courseCodeByUiId.put(section.getUiId(), data.courseCode);
+
+        selectedSectionUiId = section.getUiId();
         refreshView();
     }
 
@@ -163,7 +167,7 @@ public class TimetablePanel extends JPanel {
 
         BlockFormData initial = BlockFormData.fromSection(
                 section,
-                displayTypeByUiId.getOrDefault(sectionUiId, "")
+                courseCodeByUiId.getOrDefault(sectionUiId, "")
         );
 
         BlockFormData updated = BlockDialog.show(
@@ -174,10 +178,13 @@ public class TimetablePanel extends JPanel {
         );
         if (updated == null) return;
 
-        section.setSectionCode(updated.title);
+        section.setSectionCode(updated.sectionCode);
         section.setColor(updated.color);
-        section.setSectionType(BlockDialog.parseSectionTypeOrDefault(updated.typeText));
-        displayTypeByUiId.put(sectionUiId, updated.typeText);
+        section.setSectionType(BlockDialog.parseSectionTypeOrDefault(updated.sectionType));
+        section.setInstructor(updated.instructor);
+        section.setLocation(updated.location);
+
+        courseCodeByUiId.put(sectionUiId, updated.courseCode);
 
         section.clearTimeBlocks();
         for (String day : updated.days) {
@@ -198,7 +205,7 @@ public class TimetablePanel extends JPanel {
         if (confirm != JOptionPane.YES_OPTION) return;
 
         schedule.removeSectionByUiId(sectionUiId);
-        displayTypeByUiId.remove(sectionUiId);
+        courseCodeByUiId.remove(sectionUiId);
 
         if (sectionUiId.equals(selectedSectionUiId)) {
             selectedSectionUiId = null;
@@ -221,8 +228,8 @@ public class TimetablePanel extends JPanel {
         return sectionUiId != null && sectionUiId.equals(selectedSectionUiId);
     }
 
-    private String getDisplayTypeForSection(String sectionUiId) {
-        return displayTypeByUiId.getOrDefault(sectionUiId, "");
+    private String getCourseCodeForSection(String sectionUiId) {
+        return courseCodeByUiId.getOrDefault(sectionUiId, "");
     }
 
     private void refreshView() {
@@ -244,7 +251,8 @@ public class TimetablePanel extends JPanel {
             return;
         }
 
-        detailsPanel.bind(section, displayTypeByUiId.getOrDefault(selectedSectionUiId, ""));
+        String courseCode = courseCodeByUiId.getOrDefault(selectedSectionUiId, "");
+        detailsPanel.bind(section, courseCode);
         detailsPanel.setVisible(true);
     }
 
@@ -298,5 +306,11 @@ public class TimetablePanel extends JPanel {
         button.setMargin(new Insets(0, 0, 0, 0));
         button.setBorder(BorderFactory.createEmptyBorder());
         return button;
+    }
+
+    public static String formatRange(java.time.LocalTime start, java.time.LocalTime end) {
+        java.time.format.DateTimeFormatter formatter =
+                java.time.format.DateTimeFormatter.ofPattern("h:mm a", java.util.Locale.ENGLISH);
+        return start.format(formatter) + " - " + end.format(formatter);
     }
 }

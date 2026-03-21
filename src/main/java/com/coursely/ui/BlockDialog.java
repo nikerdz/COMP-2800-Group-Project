@@ -37,8 +37,23 @@ public final class BlockDialog {
     private BlockDialog() {}
 
     public static BlockFormData show(Component parent, String dialogTitle, BlockFormData initial, String[] days) {
-        JTextField titleField = new JTextField(initial.title, 16);
-        JTextField typeField = new JTextField(initial.typeText, 16);
+        JTextField courseCodeField = new JTextField(initial.courseCode, 30);
+        JTextField courseNameField = new JTextField(initial.courseName, 30);
+        JTextField facultyField = new JTextField(initial.faculty, 30);
+        JTextField termField = new JTextField(initial.term, 30);
+
+        JTextField sectionCodeField = new JTextField(initial.sectionCode, 16);
+        JComboBox<String> sectionTypeField = new JComboBox<>(new String[] {
+                "LECTURE", "LAB", "TUTORIAL", "SEMINAR"
+        });
+        sectionTypeField.setSelectedItem(
+                initial.sectionType == null || initial.sectionType.isBlank()
+                        ? "LECTURE"
+                        : initial.sectionType.toUpperCase(Locale.ENGLISH)
+        );
+
+        JTextField instructorField = new JTextField(initial.instructor, 16);
+        JTextField locationField = new JTextField(initial.location, 16);
 
         Map<String, JCheckBox> dayCheckboxes = createDayCheckboxes(days);
         for (String d : initial.days) {
@@ -62,7 +77,20 @@ public final class BlockDialog {
         colorField.addActionListener(e -> updateColorPreview(colorPreview, (String) colorField.getSelectedItem()));
 
         JPanel formPanel = buildFormPanel(
-                titleField, dayCheckboxes, startField, endField, colorField, colorPreview, typeField, days
+                courseCodeField,
+                courseNameField,
+                facultyField,
+                termField,
+                sectionCodeField,
+                sectionTypeField,
+                instructorField,
+                locationField,
+                dayCheckboxes,
+                startField,
+                endField,
+                colorField,
+                colorPreview,
+                days
         );
 
         while (true) {
@@ -78,14 +106,29 @@ public final class BlockDialog {
                 return null;
             }
 
-            String title = titleField.getText().trim();
+            String courseCode = courseCodeField.getText().trim();
+            String courseName = courseNameField.getText().trim();
+            String faculty = facultyField.getText().trim();
+            String term = termField.getText().trim();
+
+            String sectionCode = sectionCodeField.getText().trim();
+            String sectionType = ((String) sectionTypeField.getSelectedItem()).trim();
+            String instructor = instructorField.getText().trim();
+            String location = locationField.getText().trim();
+
             List<String> selectedDays = getSelectedDays(dayCheckboxes, days);
             String startInput = (String) startField.getSelectedItem();
             String endInput = (String) endField.getSelectedItem();
             String colorName = (String) colorField.getSelectedItem();
-            String typeText = typeField.getText().trim();
 
-            String validationError = validateBlock(title, selectedDays, startInput, endInput);
+            String validationError = validateBlock(
+                    courseCode,
+                    courseName,
+                    sectionCode,
+                    selectedDays,
+                    startInput,
+                    endInput
+            );
             if (validationError != null) {
                 JOptionPane.showMessageDialog(parent, validationError, "Validation Error", JOptionPane.ERROR_MESSAGE);
                 continue;
@@ -95,7 +138,20 @@ public final class BlockDialog {
             LocalTime end = parseTimeFlexible(endInput);
             Color color = getColorByName(colorName);
 
-            return new BlockFormData(title, selectedDays, start, end, typeText, color);
+            return new BlockFormData(
+                    courseCode,
+                    courseName,
+                    faculty,
+                    term,
+                    sectionCode,
+                    sectionType,
+                    instructor,
+                    location,
+                    selectedDays,
+                    start,
+                    end,
+                    color
+            );
         }
     }
 
@@ -109,13 +165,19 @@ public final class BlockDialog {
     }
 
     private static JPanel buildFormPanel(
-            JTextField titleField,
+            JTextField courseCodeField,
+            JTextField courseNameField,
+            JTextField facultyField,
+            JTextField termField,
+            JTextField sectionCodeField,
+            JComboBox<String> sectionTypeField,
+            JTextField instructorField,
+            JTextField locationField,
             Map<String, JCheckBox> dayCheckboxes,
             JComboBox<String> startField,
             JComboBox<String> endField,
             JComboBox<String> colorField,
             JPanel colorPreview,
-            JTextField typeField,
             String[] days
     ) {
         JPanel form = new JPanel(new GridBagLayout());
@@ -126,18 +188,34 @@ public final class BlockDialog {
         gbc.fill = GridBagConstraints.HORIZONTAL;
         gbc.anchor = GridBagConstraints.WEST;
 
-        titleField.setFont(Theme.FONT_BODY.deriveFont(20f));
+        courseCodeField.setFont(Theme.FONT_BODY.deriveFont(20f));
+        courseNameField.setFont(Theme.FONT_BODY.deriveFont(20f));
+        facultyField.setFont(Theme.FONT_BODY.deriveFont(20f));
+        termField.setFont(Theme.FONT_BODY.deriveFont(20f));
+
+        sectionCodeField.setFont(Theme.FONT_BODY.deriveFont(20f));
+        sectionTypeField.setFont(Theme.FONT_BODY.deriveFont(20f));
+        instructorField.setFont(Theme.FONT_BODY.deriveFont(20f));
+        locationField.setFont(Theme.FONT_BODY.deriveFont(20f));
+
         startField.setFont(Theme.FONT_BODY.deriveFont(20f));
         endField.setFont(Theme.FONT_BODY.deriveFont(20f));
         colorField.setFont(Theme.FONT_BODY.deriveFont(20f));
-        typeField.setFont(Theme.FONT_BODY.deriveFont(20f));
 
-        addRow(form, gbc, 0, "Title / Course Code", titleField);
-        addRow(form, gbc, 1, "Days", createDaySelectionPanel(dayCheckboxes, days));
-        addRow(form, gbc, 2, "Start Time", startField);
-        addRow(form, gbc, 3, "End Time", endField);
-        addRow(form, gbc, 4, "Color", createColorPickerRow(colorField, colorPreview));
-        addRow(form, gbc, 5, "Type (Optional)", typeField);
+        addRow(form, gbc, 0, "Course Code", courseCodeField);
+        addRow(form, gbc, 1, "Course Name", courseNameField);
+        addRow(form, gbc, 2, "Faculty", facultyField);
+        addRow(form, gbc, 3, "Term", termField);
+
+        addRow(form, gbc, 4, "Section Code", sectionCodeField);
+        addRow(form, gbc, 5, "Section Type", sectionTypeField);
+        addRow(form, gbc, 6, "Instructor", instructorField);
+        addRow(form, gbc, 7, "Location", locationField);
+
+        addRow(form, gbc, 8, "Days", createDaySelectionPanel(dayCheckboxes, days));
+        addRow(form, gbc, 9, "Start Time", startField);
+        addRow(form, gbc, 10, "End Time", endField);
+        addRow(form, gbc, 11, "Color", createColorPickerRow(colorField, colorPreview));
 
         return form;
     }
@@ -170,8 +248,8 @@ public final class BlockDialog {
 
     private static String findColorName(Color color) {
         if (color == null) return null;
-        for (Map.Entry<String, Color> e : PRESET_COLORS.entrySet()) {
-            if (e.getValue().equals(color)) return e.getKey();
+        for (Map.Entry<String, Color> entry : PRESET_COLORS.entrySet()) {
+            if (entry.getValue().equals(color)) return entry.getKey();
         }
         return null;
     }
@@ -185,7 +263,7 @@ public final class BlockDialog {
     }
 
     private static JPanel createDaySelectionPanel(Map<String, JCheckBox> dayCheckboxes, String[] days) {
-        JPanel dayPanel = new JPanel(new GridLayout(0, 2, 6, 2));
+        JPanel dayPanel = new JPanel(new GridLayout(0, 4, 6, 2));
         dayPanel.setOpaque(false);
 
         for (String day : days) {
@@ -225,8 +303,17 @@ public final class BlockDialog {
         panel.add(field, gbc);
     }
 
-    private static String validateBlock(String title, List<String> selectedDays, String startInput, String endInput) {
-        if (title.isBlank()) return "Title / Course Code is required.";
+    private static String validateBlock(
+            String courseCode,
+            String courseName,
+            String sectionCode,
+            List<String> selectedDays,
+            String startInput,
+            String endInput
+    ) {
+        if (courseCode.isBlank()) return "Course code is required.";
+        if (courseName.isBlank()) return "Course name is required.";
+        if (sectionCode.isBlank()) return "Section code is required.";
         if (selectedDays.isEmpty()) return "Please select at least one day.";
         if (selectedDays.size() > 2) return "Please select up to two days for this block.";
         if (startInput == null || endInput == null || startInput.isBlank() || endInput.isBlank()) {
@@ -239,7 +326,6 @@ public final class BlockDialog {
         if (start == null || end == null) {
             return "Invalid time format. Use values like 9:00 AM.";
         }
-
         if (!end.isAfter(start)) {
             return "End time must be after start time.";
         }
