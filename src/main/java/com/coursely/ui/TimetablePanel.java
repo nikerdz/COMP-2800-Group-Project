@@ -3,7 +3,6 @@ package com.coursely.ui;
 import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Dimension;
-import java.awt.Font;
 import java.awt.Graphics;
 import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
@@ -61,7 +60,7 @@ public class TimetablePanel extends JPanel {
         title.setHorizontalAlignment(SwingConstants.LEFT);
         
         JButton addBlockButton = new JButton("Add Block");
-        addBlockButton.setBackground(Color.WHITE);
+        addBlockButton.setBackground(Theme.BRAND_OFFWHITE);
         addBlockButton.setForeground(Theme.BRAND_BROWN);
         addBlockButton.setFocusPainted(false);
         addBlockButton.setOpaque(true);
@@ -82,9 +81,9 @@ public class TimetablePanel extends JPanel {
 
         JPanel grid = new JPanel(new GridLayout(TIME_SLOTS.length + 1, DAYS.length + 1));
         grid.setBorder(BorderFactory.createLineBorder(GRID_BORDER_COLOR));
-        grid.setBackground(Color.WHITE);
+        grid.setBackground(Theme.BRAND_OFFWHITE);
 
-        grid.add(createHeaderCell("Time"));
+        grid.add(createHeaderCell(""));
         for (String day : DAYS) {
             grid.add(createHeaderCell(day));
         }
@@ -116,13 +115,13 @@ public class TimetablePanel extends JPanel {
         label.setOpaque(true);
         label.setBackground(TIME_COL_BG_COLOR);
         label.setForeground(Theme.BRAND_BROWN);
-        label.setFont(Theme.FONT_HEADING.deriveFont(16f));
+        label.setFont(Theme.FONT_BODY.deriveFont(25f));
         return label;
     }
 
     private TimetableBodyCell createBodyCell() {
         TimetableBodyCell label = new TimetableBodyCell();
-        label.setBackground(Color.WHITE);
+        label.setBackground(Theme.BRAND_OFFWHITE);
         label.setVerticalAlignment(SwingConstants.TOP);
         label.setHorizontalAlignment(SwingConstants.CENTER);
         label.setBorder(new MatteBorder(0, 0, 1, 1, GRID_LINE_COLOR));
@@ -468,7 +467,7 @@ public class TimetablePanel extends JPanel {
 
         @Override
         protected void paintComponent(Graphics g) {
-            g.setColor(Color.WHITE);
+            g.setColor(Theme.BRAND_OFFWHITE);
             g.fillRect(0, 0, getWidth(), getHeight());
 
             if (fillEndFraction > fillStartFraction) {
