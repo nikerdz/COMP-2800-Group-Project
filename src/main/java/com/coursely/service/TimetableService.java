@@ -1,5 +1,7 @@
 package com.coursely.service;
 
+import java.util.List;
+
 import com.coursely.db.CourseDao;
 import com.coursely.db.ScheduleDao;
 import com.coursely.db.SectionDao;
@@ -23,6 +25,10 @@ public class TimetableService {
 
     public Schedule loadSchedule(int scheduleId) {
         return scheduleDao.findById(scheduleId);
+    }
+
+    public List<Schedule> getAllSchedules() {
+        return scheduleDao.findAll();
     }
 
     public void saveScheduleDetails(Schedule schedule) {

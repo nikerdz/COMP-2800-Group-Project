@@ -77,7 +77,7 @@ public class TimetablePanel extends JPanel {
         timetableTitleLabel.setHorizontalAlignment(SwingConstants.LEFT);
 
         JButton editTitleButton = createIconButton("/images/edit-btn.png");
-        editTitleButton.setToolTipText("Edit schedule title");
+        editTitleButton.setToolTipText("Edit schedule name");
         editTitleButton.addActionListener(e -> editTimetableTitle());
 
         leftPanel.add(timetableTitleLabel);
@@ -287,59 +287,99 @@ public class TimetablePanel extends JPanel {
     }
 
     private void saveSchedule() {
-        ensureScheduleHasBasicInfo();
+    String currentName = schedule.getScheduleName() == null || schedule.getScheduleName().isBlank()
+            ? "Weekly Schedule"
+            : schedule.getScheduleName();
 
+    String name = (String) JOptionPane.showInputDialog(
+            this,
+            "Enter a name for this schedule:",
+            "Save Schedule",
+            JOptionPane.PLAIN_MESSAGE,
+            null,
+            null,
+            currentName
+    );
+
+    if (name == null || name.trim().isBlank()) return;
+
+    schedule.setScheduleName(name.trim());
+    timetableTitleLabel.setText(name.trim());
+
+    try {
+        timetableService.saveScheduleDetails(schedule);
+        JOptionPane.showMessageDialog(
+                this,
+                "Schedule \"" + schedule.getScheduleName() + "\" saved.\nID: " + schedule.getScheduleId(),
+                "Saved",
+                JOptionPane.INFORMATION_MESSAGE
+        );
+    } catch (RuntimeException e) {
+        JOptionPane.showMessageDialog(
+                this,
+                "Failed to save schedule:\n" + e.getMessage(),
+                "Save Error",
+                JOptionPane.ERROR_MESSAGE
+        );
+    }
+}
+
+    private void loadSchedule() {
+        List<Schedule> all;
         try {
-            timetableService.saveScheduleDetails(schedule);
-
-            if (schedule.getScheduleId() == null) {
-                JOptionPane.showMessageDialog(this, "Schedule saved.");
-            } else {
-                JOptionPane.showMessageDialog(
-                        this,
-                        "Schedule saved.\nSchedule ID: " + schedule.getScheduleId()
-                );
-            }
+            all = timetableService.getAllSchedules();
         } catch (RuntimeException e) {
             JOptionPane.showMessageDialog(
                     this,
-                    "Failed to save schedule:\n" + e.getMessage(),
-                    "Save Error",
+                    "Failed to load schedules:\n" + e.getMessage(),
+                    "Load Error",
                     JOptionPane.ERROR_MESSAGE
             );
+            return;
         }
-    }
 
-    private void loadSchedule() {
-        String input = JOptionPane.showInputDialog(
+        if (all.isEmpty()) {
+            JOptionPane.showMessageDialog(
+                    this,
+                    "No saved schedules found.",
+                    "Load Schedule",
+                    JOptionPane.INFORMATION_MESSAGE
+            );
+            return;
+        }
+
+        String[] options = all.stream()
+                .map(s -> s.getScheduleId() + "  —  " + s.getScheduleName()
+                        + (s.getCreatedAt() != null ? "  (" + s.getCreatedAt() + ")" : ""))
+                .toArray(String[]::new);
+
+        String choice = (String) JOptionPane.showInputDialog(
                 this,
-                "Enter schedule ID to load:",
+                "Select a schedule to load:",
                 "Load Schedule",
-                JOptionPane.PLAIN_MESSAGE
+                JOptionPane.PLAIN_MESSAGE,
+                null,
+                options,
+                options[0]
         );
 
-        if (input == null || input.trim().isBlank()) return;
+        if (choice == null) return;
+
+        int scheduleId = Integer.parseInt(choice.split("  —  ")[0].trim());
 
         try {
-            int scheduleId = Integer.parseInt(input.trim());
             Schedule loaded = timetableService.loadSchedule(scheduleId);
-
             if (loaded == null) {
-                JOptionPane.showMessageDialog(
-                        this,
-                        "No schedule found with ID " + scheduleId,
-                        "Not Found",
-                        JOptionPane.WARNING_MESSAGE
-                );
+                JOptionPane.showMessageDialog(this, "Schedule not found.", "Error", JOptionPane.ERROR_MESSAGE);
                 return;
             }
 
             schedule = loaded;
             selectedSectionUiId = null;
             timetableTitleLabel.setText(
-                    schedule.getScheduleName() == null || schedule.getScheduleName().isBlank()
+                    loaded.getScheduleName() == null || loaded.getScheduleName().isBlank()
                             ? "Weekly Timetable"
-                            : schedule.getScheduleName()
+                            : loaded.getScheduleName()
             );
 
             rebuildCourseCodeMapFromLoadedSchedule();
@@ -347,16 +387,9 @@ public class TimetablePanel extends JPanel {
 
             JOptionPane.showMessageDialog(
                     this,
-                    "Loaded schedule: " + timetableTitleLabel.getText(),
+                    "Loaded: " + timetableTitleLabel.getText(),
                     "Load Complete",
                     JOptionPane.INFORMATION_MESSAGE
-            );
-        } catch (NumberFormatException e) {
-            JOptionPane.showMessageDialog(
-                    this,
-                    "Please enter a valid numeric schedule ID.",
-                    "Invalid Input",
-                    JOptionPane.ERROR_MESSAGE
             );
         } catch (RuntimeException e) {
             JOptionPane.showMessageDialog(
