@@ -30,7 +30,7 @@ public final class Theme {
     // Font sizes 
     // -----------
     public static final float SIZE_TITLE = 36f;
-    public static final float SIZE_HEADING = 22f;
+    public static final float SIZE_HEADING = 30f;
     public static final float SIZE_BODY = 16f;
     public static final float SIZE_SMALL = 13f;
 

@@ -41,7 +41,7 @@ public class MainFrame extends JFrame {
         logoMark.setBorder(new EmptyBorder(0, 0, 0, 6));
 
         brandLeft.add(logoMark);
-        header.add(brandLeft, BorderLayout.CENTER);
+        header.add(brandLeft, BorderLayout.WEST);
 
         return header;
     }
