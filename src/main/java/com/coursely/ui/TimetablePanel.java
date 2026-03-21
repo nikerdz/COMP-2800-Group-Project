@@ -3,7 +3,12 @@ package com.coursely.ui;
 import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Insets;
+import java.time.LocalTime;
+import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 
 import javax.swing.BorderFactory;
@@ -15,9 +20,12 @@ import javax.swing.SwingConstants;
 import javax.swing.border.EmptyBorder;
 import javax.swing.border.LineBorder;
 
+import com.coursely.db.CourseDao;
+import com.coursely.model.Course;
 import com.coursely.model.Schedule;
 import com.coursely.model.Section;
 import com.coursely.model.TimeBlock;
+import com.coursely.service.TimetableService;
 
 public class TimetablePanel extends JPanel {
 
@@ -32,9 +40,12 @@ public class TimetablePanel extends JPanel {
 
     private static final Color PANEL_BG_COLOR = Theme.BRAND_OFFWHITE;
 
-    private final Schedule schedule = new Schedule();
+    private final TimetableService timetableService = new TimetableService();
+    private final CourseDao courseDao = new CourseDao();
 
-    // Temporary UI-only mapping until Course objects / DB wiring are integrated.
+    private Schedule schedule = new Schedule("Weekly Timetable", null);
+
+    // Temporary UI-only mapping until Course objects are wired directly into loaded sections.
     private final Map<String, String> courseCodeByUiId = new LinkedHashMap<>();
 
     private String selectedSectionUiId;
@@ -60,7 +71,7 @@ public class TimetablePanel extends JPanel {
         JPanel leftPanel = new JPanel(new java.awt.FlowLayout(java.awt.FlowLayout.LEFT, 8, 0));
         leftPanel.setOpaque(false);
 
-        timetableTitleLabel = new JLabel("Weekly Timetable");
+        timetableTitleLabel = new JLabel(schedule.getScheduleName());
         timetableTitleLabel.setFont(Theme.FONT_HEADING.deriveFont(Theme.SIZE_HEADING));
         timetableTitleLabel.setForeground(Theme.BRAND_BROWN);
         timetableTitleLabel.setHorizontalAlignment(SwingConstants.LEFT);
@@ -138,26 +149,12 @@ public class TimetablePanel extends JPanel {
         );
         if (data == null) return;
 
-        Section section = new Section(
-                null,
-                null,
-                data.sectionCode,
-                BlockDialog.parseSectionTypeOrDefault(data.sectionType),
-                data.instructor,
-                data.location,
-                data.color
-        );
+        ensureScheduleHasBasicInfo();
+        Section savedSection = timetableService.addBlockToSchedule(schedule, data);
 
-        for (String day : data.days) {
-            section.addTimeBlock(new TimeBlock(day, data.start, data.end));
-        }
+        courseCodeByUiId.put(savedSection.getUiId(), data.courseCode);
+        selectedSectionUiId = savedSection.getUiId();
 
-        schedule.addSection(section);
-
-        // Temporary until full Course model / DB wiring is in place.
-        courseCodeByUiId.put(section.getUiId(), data.courseCode);
-
-        selectedSectionUiId = section.getUiId();
         refreshView();
     }
 
@@ -165,46 +162,64 @@ public class TimetablePanel extends JPanel {
         Section section = schedule.findSectionByUiId(sectionUiId).orElse(null);
         if (section == null) return;
 
-        BlockFormData initial = BlockFormData.fromSection(
-                section,
-                courseCodeByUiId.getOrDefault(sectionUiId, "")
-        );
+        String courseCode = courseCodeByUiId.getOrDefault(sectionUiId, "");
+        Course course = section.getCourseId() != null
+                ? courseDao.findById(section.getCourseId())
+                : null;
 
-        BlockFormData updated = BlockDialog.show(
-                this,
-                "Edit Timetable Block",
-                initial,
-                DAYS
-        );
-        if (updated == null) return;
-
-        section.setSectionCode(updated.sectionCode);
-        section.setColor(updated.color);
-        section.setSectionType(BlockDialog.parseSectionTypeOrDefault(updated.sectionType));
-        section.setInstructor(updated.instructor);
-        section.setLocation(updated.location);
-
-        courseCodeByUiId.put(sectionUiId, updated.courseCode);
-
-        section.clearTimeBlocks();
-        for (String day : updated.days) {
-            section.addTimeBlock(new TimeBlock(day, updated.start, updated.end));
+        List<String> days = new ArrayList<>();
+        LocalTime start = LocalTime.of(9, 0);
+        LocalTime end = LocalTime.of(10, 0);
+        if (!section.getTimeBlocks().isEmpty()) {
+            start = section.getTimeBlocks().get(0).getStartTime();
+            end = section.getTimeBlocks().get(0).getEndTime();
+        }
+        for (TimeBlock tb : section.getTimeBlocks()) {
+            days.add(tb.getDayOfWeek());
         }
 
+        BlockFormData initial = new BlockFormData(
+                courseCode,
+                course != null ? course.getCourseName() : "",
+                course != null && course.getFaculty() != null ? course.getFaculty() : "",
+                course != null && course.getTerm() != null ? course.getTerm() : "",
+                section.getSectionCode() == null ? "" : section.getSectionCode(),
+                section.getSectionType() == null ? "LECTURE" : section.getSectionType().name(),
+                section.getInstructor() == null ? "" : section.getInstructor(),
+                section.getLocation() == null ? "" : section.getLocation(),
+                days,
+                start,
+                end,
+                section.getColor() == null ? Theme.BLOCK_BLUE : section.getColor()
+        );
+
+        BlockFormData updated = BlockDialog.show(this, "Edit Timetable Block", initial, DAYS);
+        if (updated == null) return;
+
+        ensureScheduleHasBasicInfo();
+        timetableService.updateBlock(section, updated, schedule);
+        courseCodeByUiId.put(sectionUiId, updated.courseCode);
         refreshView();
     }
 
     private void deleteBlock(String sectionUiId) {
+        Section section = schedule.findSectionByUiId(sectionUiId).orElse(null);
+        if (section == null) return;
+
         int confirm = JOptionPane.showConfirmDialog(
                 this,
                 "Delete this block?",
                 "Confirm Delete",
                 JOptionPane.YES_NO_OPTION
         );
-
         if (confirm != JOptionPane.YES_OPTION) return;
 
-        schedule.removeSectionByUiId(sectionUiId);
+        if (schedule.getScheduleId() != null && section.getSectionId() != null) {
+            timetableService.deleteBlock(schedule, section);
+        } else {
+            schedule.removeSectionByUiId(sectionUiId);
+        }
+
         courseCodeByUiId.remove(sectionUiId);
 
         if (sectionUiId.equals(selectedSectionUiId)) {
@@ -264,6 +279,7 @@ public class TimetablePanel extends JPanel {
         );
 
         if (newTitle != null && !newTitle.trim().isBlank()) {
+            schedule.setScheduleName(newTitle.trim());
             timetableTitleLabel.setText(newTitle.trim());
             revalidate();
             repaint();
@@ -271,15 +287,113 @@ public class TimetablePanel extends JPanel {
     }
 
     private void saveSchedule() {
-        JOptionPane.showMessageDialog(this, "Save Schedule clicked.");
+        ensureScheduleHasBasicInfo();
+
+        try {
+            timetableService.saveScheduleDetails(schedule);
+
+            if (schedule.getScheduleId() == null) {
+                JOptionPane.showMessageDialog(this, "Schedule saved.");
+            } else {
+                JOptionPane.showMessageDialog(
+                        this,
+                        "Schedule saved.\nSchedule ID: " + schedule.getScheduleId()
+                );
+            }
+        } catch (RuntimeException e) {
+            JOptionPane.showMessageDialog(
+                    this,
+                    "Failed to save schedule:\n" + e.getMessage(),
+                    "Save Error",
+                    JOptionPane.ERROR_MESSAGE
+            );
+        }
     }
 
     private void loadSchedule() {
-        JOptionPane.showMessageDialog(this, "Load Schedule clicked.");
+        String input = JOptionPane.showInputDialog(
+                this,
+                "Enter schedule ID to load:",
+                "Load Schedule",
+                JOptionPane.PLAIN_MESSAGE
+        );
+
+        if (input == null || input.trim().isBlank()) return;
+
+        try {
+            int scheduleId = Integer.parseInt(input.trim());
+            Schedule loaded = timetableService.loadSchedule(scheduleId);
+
+            if (loaded == null) {
+                JOptionPane.showMessageDialog(
+                        this,
+                        "No schedule found with ID " + scheduleId,
+                        "Not Found",
+                        JOptionPane.WARNING_MESSAGE
+                );
+                return;
+            }
+
+            schedule = loaded;
+            selectedSectionUiId = null;
+            timetableTitleLabel.setText(
+                    schedule.getScheduleName() == null || schedule.getScheduleName().isBlank()
+                            ? "Weekly Timetable"
+                            : schedule.getScheduleName()
+            );
+
+            rebuildCourseCodeMapFromLoadedSchedule();
+            refreshView();
+
+            JOptionPane.showMessageDialog(
+                    this,
+                    "Loaded schedule: " + timetableTitleLabel.getText(),
+                    "Load Complete",
+                    JOptionPane.INFORMATION_MESSAGE
+            );
+        } catch (NumberFormatException e) {
+            JOptionPane.showMessageDialog(
+                    this,
+                    "Please enter a valid numeric schedule ID.",
+                    "Invalid Input",
+                    JOptionPane.ERROR_MESSAGE
+            );
+        } catch (RuntimeException e) {
+            JOptionPane.showMessageDialog(
+                    this,
+                    "Failed to load schedule:\n" + e.getMessage(),
+                    "Load Error",
+                    JOptionPane.ERROR_MESSAGE
+            );
+        }
     }
 
     private void exportSchedule() {
         JOptionPane.showMessageDialog(this, "Export Schedule clicked.");
+    }
+
+    private void rebuildCourseCodeMapFromLoadedSchedule() {
+        courseCodeByUiId.clear();
+
+        for (Section section : schedule.getSections()) {
+            if (section.getCourseId() == null) continue;
+
+            Course course = courseDao.findById(section.getCourseId());
+            if (course != null && course.getCourseCode() != null) {
+                courseCodeByUiId.put(section.getUiId(), course.getCourseCode());
+            }
+        }
+    }
+
+    private void ensureScheduleHasBasicInfo() {
+        if (schedule.getScheduleName() == null || schedule.getScheduleName().isBlank()) {
+            schedule.setScheduleName("Weekly Schedule");
+        }
+
+        if (timetableTitleLabel != null &&
+                (timetableTitleLabel.getText() == null || timetableTitleLabel.getText().isBlank())) {
+            timetableTitleLabel.setText(schedule.getScheduleName());
+        }
     }
 
     private void styleHeaderButton(JButton btn) {
@@ -308,9 +422,8 @@ public class TimetablePanel extends JPanel {
         return button;
     }
 
-    public static String formatRange(java.time.LocalTime start, java.time.LocalTime end) {
-        java.time.format.DateTimeFormatter formatter =
-                java.time.format.DateTimeFormatter.ofPattern("h:mm a", java.util.Locale.ENGLISH);
+    public static String formatRange(LocalTime start, LocalTime end) {
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("h:mm a", Locale.ENGLISH);
         return start.format(formatter) + " - " + end.format(formatter);
     }
 }

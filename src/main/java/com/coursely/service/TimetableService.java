@@ -7,8 +7,8 @@ import com.coursely.model.Course;
 import com.coursely.model.Schedule;
 import com.coursely.model.Section;
 import com.coursely.model.TimeBlock;
-import com.coursely.ui.BlockFormData;
 import com.coursely.ui.BlockDialog;
+import com.coursely.ui.BlockFormData;
 
 public class TimetableService {
 
@@ -73,6 +73,12 @@ public class TimetableService {
                 data.faculty,
                 data.term == null || data.term.isBlank() ? schedule.getTerm() : data.term
         );
+
+        // Update course fields in case name/faculty/term changed
+        course.setCourseName(data.courseName);
+        course.setFaculty(emptyToNull(data.faculty));
+        course.setTerm(emptyToNull(data.term == null || data.term.isBlank() ? schedule.getTerm() : data.term));
+        courseDao.update(course);
 
         section.setCourseId(course.getCourseId());
         section.setSectionCode(data.sectionCode);
