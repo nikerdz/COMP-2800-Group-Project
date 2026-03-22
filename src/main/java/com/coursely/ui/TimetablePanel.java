@@ -2,23 +2,32 @@ package com.coursely.ui;
 
 import java.awt.BorderLayout;
 import java.awt.Color;
+import java.awt.Graphics2D;
 import java.awt.Insets;
+import java.awt.image.BufferedImage;
+import java.io.File;
+import java.io.IOException;
 import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
 
+import javax.imageio.ImageIO;
 import javax.swing.BorderFactory;
 import javax.swing.JButton;
+import javax.swing.JFileChooser;
 import javax.swing.JLabel;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.SwingConstants;
 import javax.swing.border.EmptyBorder;
 import javax.swing.border.LineBorder;
+import javax.swing.filechooser.FileNameExtensionFilter;
 
 import com.coursely.db.CourseDao;
 import com.coursely.model.Course;
@@ -49,11 +58,13 @@ public class TimetablePanel extends JPanel {
     private final Map<String, String> courseCodeByUiId = new LinkedHashMap<>();
 
     private String selectedSectionUiId;
+    private final Set<String> conflictSectionUiIds = new HashSet<>();
 
     private JLabel timetableTitleLabel;
     private TimetableGridPanel gridPanel;
     private TimetableBlockLayer blockLayer;
     private SectionDetailsPanel detailsPanel;
+    private TimetableLayeredPane layeredPane;
 
     public TimetablePanel() {
         setLayout(new BorderLayout(0, 12));
@@ -134,7 +145,7 @@ public class TimetablePanel extends JPanel {
         detailsPanel = new SectionDetailsPanel(this::editBlock, this::deleteBlock);
         detailsPanel.setVisible(false);
 
-        TimetableLayeredPane layeredPane = new TimetableLayeredPane(gridPanel, blockLayer, detailsPanel);
+        layeredPane = new TimetableLayeredPane(gridPanel, blockLayer, detailsPanel);
         area.add(layeredPane, BorderLayout.CENTER);
 
         return area;
@@ -148,10 +159,12 @@ public class TimetablePanel extends JPanel {
                 DAYS
         );
         if (data == null) return;
+        if (showConflictFeedbackIfNeeded(data, null)) return;
 
         ensureScheduleHasBasicInfo();
         Section savedSection = timetableService.addBlockToSchedule(schedule, data);
 
+        clearConflictHighlights();
         courseCodeByUiId.put(savedSection.getUiId(), data.courseCode);
         selectedSectionUiId = savedSection.getUiId();
 
@@ -195,9 +208,11 @@ public class TimetablePanel extends JPanel {
 
         BlockFormData updated = BlockDialog.show(this, "Edit Timetable Block", initial, DAYS);
         if (updated == null) return;
+        if (showConflictFeedbackIfNeeded(updated, sectionUiId)) return;
 
         ensureScheduleHasBasicInfo();
         timetableService.updateBlock(section, updated, schedule);
+        clearConflictHighlights();
         courseCodeByUiId.put(sectionUiId, updated.courseCode);
         refreshView();
     }
@@ -225,6 +240,7 @@ public class TimetablePanel extends JPanel {
         if (sectionUiId.equals(selectedSectionUiId)) {
             selectedSectionUiId = null;
         }
+        clearConflictHighlights();
 
         refreshView();
     }
@@ -243,6 +259,10 @@ public class TimetablePanel extends JPanel {
         return sectionUiId != null && sectionUiId.equals(selectedSectionUiId);
     }
 
+    private boolean isConflictHighlighted(String sectionUiId) {
+        return sectionUiId != null && conflictSectionUiIds.contains(sectionUiId);
+    }
+
     private String getCourseCodeForSection(String sectionUiId) {
         return courseCodeByUiId.getOrDefault(sectionUiId, "");
     }
@@ -252,6 +272,52 @@ public class TimetablePanel extends JPanel {
         updateDetailsPanel();
         revalidate();
         repaint();
+    }
+
+    private boolean showConflictFeedbackIfNeeded(BlockFormData data, String sectionUiIdToIgnore) {
+        Section candidate = new Section(
+                null,
+                null,
+                data.sectionCode == null || data.sectionCode.isBlank() ? data.courseCode : data.sectionCode,
+                BlockDialog.parseSectionTypeOrDefault(data.sectionType),
+                data.instructor,
+                data.location,
+                data.color
+        );
+        for (String day : data.days) {
+            candidate.addTimeBlock(new TimeBlock(day, data.start, data.end));
+        }
+
+        List<Section> conflicts = schedule.findConflicts(candidate);
+        if (sectionUiIdToIgnore != null && !sectionUiIdToIgnore.isBlank()) {
+            conflicts.removeIf(s -> sectionUiIdToIgnore.equals(s.getUiId()));
+        }
+
+        if (conflicts.isEmpty()) {
+            clearConflictHighlights();
+            return false;
+        }
+
+        conflictSectionUiIds.clear();
+        for (Section conflict : conflicts) {
+            conflictSectionUiIds.add(conflict.getUiId());
+        }
+        selectedSectionUiId = conflicts.get(0).getUiId();
+        refreshView();
+
+        JOptionPane.showMessageDialog(
+                this,
+                "Time conflict detected. This block overlaps an existing block.\n"
+                        + "Please adjust the day/time and try again.",
+                "Scheduling Conflict",
+                JOptionPane.WARNING_MESSAGE
+        );
+        return true;
+    }
+
+    private void clearConflictHighlights() {
+        if (conflictSectionUiIds.isEmpty()) return;
+        conflictSectionUiIds.clear();
     }
 
     private void updateDetailsPanel() {
@@ -287,42 +353,42 @@ public class TimetablePanel extends JPanel {
     }
 
     private void saveSchedule() {
-    String currentName = schedule.getScheduleName() == null || schedule.getScheduleName().isBlank()
-            ? "Weekly Schedule"
-            : schedule.getScheduleName();
+        String currentName = schedule.getScheduleName() == null || schedule.getScheduleName().isBlank()
+                ? "Weekly Schedule"
+                : schedule.getScheduleName();
 
-    String name = (String) JOptionPane.showInputDialog(
-            this,
-            "Enter a name for this schedule:",
-            "Save Schedule",
-            JOptionPane.PLAIN_MESSAGE,
-            null,
-            null,
-            currentName
-    );
-
-    if (name == null || name.trim().isBlank()) return;
-
-    schedule.setScheduleName(name.trim());
-    timetableTitleLabel.setText(name.trim());
-
-    try {
-        timetableService.saveScheduleDetails(schedule);
-        JOptionPane.showMessageDialog(
+        String name = (String) JOptionPane.showInputDialog(
                 this,
-                "Schedule \"" + schedule.getScheduleName() + "\" saved.\nID: " + schedule.getScheduleId(),
-                "Saved",
-                JOptionPane.INFORMATION_MESSAGE
+                "Enter a name for this schedule:",
+                "Save Schedule",
+                JOptionPane.PLAIN_MESSAGE,
+                null,
+                null,
+                currentName
         );
-    } catch (RuntimeException e) {
-        JOptionPane.showMessageDialog(
-                this,
-                "Failed to save schedule:\n" + e.getMessage(),
-                "Save Error",
-                JOptionPane.ERROR_MESSAGE
-        );
+
+        if (name == null || name.trim().isBlank()) return;
+
+        schedule.setScheduleName(name.trim());
+        timetableTitleLabel.setText(name.trim());
+
+        try {
+            timetableService.saveScheduleDetails(schedule);
+            JOptionPane.showMessageDialog(
+                    this,
+                    "Schedule \"" + schedule.getScheduleName() + "\" saved.\nID: " + schedule.getScheduleId(),
+                    "Saved",
+                    JOptionPane.INFORMATION_MESSAGE
+            );
+        } catch (RuntimeException e) {
+            JOptionPane.showMessageDialog(
+                    this,
+                    "Failed to save schedule:\n" + e.getMessage(),
+                    "Save Error",
+                    JOptionPane.ERROR_MESSAGE
+            );
+        }
     }
-}
 
     private void loadSchedule() {
         List<Schedule> all;
@@ -402,7 +468,60 @@ public class TimetablePanel extends JPanel {
     }
 
     private void exportSchedule() {
-        JOptionPane.showMessageDialog(this, "Export Schedule clicked.");
+        // Hide the details panel during export so it doesn't appear in the image
+        boolean wasVisible = detailsPanel.isVisible();
+        detailsPanel.setVisible(false);
+        layeredPane.revalidate();
+        layeredPane.repaint();
+
+        JFileChooser fileChooser = new JFileChooser();
+        fileChooser.setDialogTitle("Export Schedule as PNG");
+        fileChooser.setFileFilter(new FileNameExtensionFilter("PNG Image (*.png)", "png"));
+
+        String defaultName = (schedule.getScheduleName() == null || schedule.getScheduleName().isBlank()
+                ? "schedule"
+                : schedule.getScheduleName().replaceAll("[^a-zA-Z0-9_\\-]", "_"))
+                + ".png";
+        fileChooser.setSelectedFile(new File(defaultName));
+
+        int result = fileChooser.showSaveDialog(this);
+
+        if (result != JFileChooser.APPROVE_OPTION) {
+            detailsPanel.setVisible(wasVisible);
+            return;
+        }
+
+        File file = fileChooser.getSelectedFile();
+        if (!file.getName().toLowerCase(Locale.ENGLISH).endsWith(".png")) {
+            file = new File(file.getAbsolutePath() + ".png");
+        }
+
+        int w = layeredPane.getWidth();
+        int h = layeredPane.getHeight();
+
+        BufferedImage image = new BufferedImage(w, h, BufferedImage.TYPE_INT_RGB);
+        Graphics2D g2 = image.createGraphics();
+        layeredPane.paintAll(g2);
+        g2.dispose();
+
+        try {
+            ImageIO.write(image, "png", file);
+            JOptionPane.showMessageDialog(
+                    this,
+                    "Schedule exported to:\n" + file.getAbsolutePath(),
+                    "Export Complete",
+                    JOptionPane.INFORMATION_MESSAGE
+            );
+        } catch (IOException e) {
+            JOptionPane.showMessageDialog(
+                    this,
+                    "Failed to export schedule:\n" + e.getMessage(),
+                    "Export Error",
+                    JOptionPane.ERROR_MESSAGE
+            );
+        } finally {
+            detailsPanel.setVisible(wasVisible);
+        }
     }
 
     private void rebuildCourseCodeMapFromLoadedSchedule() {
