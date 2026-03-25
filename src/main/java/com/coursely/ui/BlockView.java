@@ -47,7 +47,7 @@ public class BlockView extends JPanel {
         JLabel courseCodeLabel = new JLabel(
                 (courseCode == null || courseCode.isBlank()) ? "Course" : courseCode
         );
-        courseCodeLabel.setFont(Theme.FONT_HEADING.deriveFont(16f));
+        courseCodeLabel.setFont(Theme.FONT_BODY.deriveFont(16f));
         courseCodeLabel.setForeground(Theme.BRAND_BROWN);
         courseCodeLabel.setHorizontalAlignment(SwingConstants.CENTER);
 
