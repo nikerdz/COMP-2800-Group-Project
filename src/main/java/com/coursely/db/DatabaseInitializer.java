@@ -23,8 +23,20 @@ public final class DatabaseInitializer {
 
         try (Connection conn = DatabaseManager.getConnection()) {
             runSchema(conn);
+            runMigrations(conn);
         } catch (SQLException | IOException e) {
             throw new RuntimeException("Database initialization failed", e);
+        }
+    }
+
+    private static void runMigrations(Connection conn) throws SQLException {
+        // Add color column to sections if it doesn't exist
+        try (ResultSet rs = conn.getMetaData().getColumns(null, null, "sections", "color")) {
+            if (!rs.next()) {
+                try (Statement s = conn.createStatement()) {
+                    s.execute("ALTER TABLE sections ADD COLUMN color TEXT");
+                }
+            }
         }
     }
 

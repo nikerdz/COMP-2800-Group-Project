@@ -11,12 +11,13 @@ import java.util.List;
 import com.coursely.model.Section;
 import com.coursely.model.SectionType;
 import com.coursely.model.TimeBlock;
+import com.coursely.ui.Theme;
 
 public class SectionDao {
 
     public Section findById(int sectionId) {
         String sql = """
-                SELECT section_id, course_id, section_code, section_type, instructor, location
+                SELECT section_id, course_id, section_code, section_type, instructor, location, color
                 FROM sections
                 WHERE section_id = ?
                 """;
@@ -46,8 +47,8 @@ public class SectionDao {
         }
 
         String sectionSql = """
-                INSERT INTO sections (course_id, section_code, section_type, instructor, location)
-                VALUES (?, ?, ?, ?, ?)
+                INSERT INTO sections (course_id, section_code, section_type, instructor, location, color)
+                VALUES (?, ?, ?, ?, ?, ?)
                 """;
 
         String timeBlockSql = """
@@ -67,6 +68,7 @@ public class SectionDao {
                 sectionPs.setString(3, section.getSectionType().name());
                 sectionPs.setString(4, section.getInstructor());
                 sectionPs.setString(5, section.getLocation());
+                sectionPs.setString(6, Theme.colorToHex(section.getColor()));
                 sectionPs.executeUpdate();
 
                 try (ResultSet keys = sectionPs.getGeneratedKeys()) {
@@ -114,7 +116,7 @@ public class SectionDao {
 
         String updateSectionSql = """
                 UPDATE sections
-                SET course_id = ?, section_code = ?, section_type = ?, instructor = ?, location = ?
+                SET course_id = ?, section_code = ?, section_type = ?, instructor = ?, location = ?, color = ?
                 WHERE section_id = ?
                 """;
 
@@ -138,7 +140,8 @@ public class SectionDao {
                 updatePs.setString(3, section.getSectionType().name());
                 updatePs.setString(4, section.getInstructor());
                 updatePs.setString(5, section.getLocation());
-                updatePs.setInt(6, section.getSectionId());
+                updatePs.setString(6, Theme.colorToHex(section.getColor()));
+                updatePs.setInt(7, section.getSectionId());
                 updatePs.executeUpdate();
 
                 deleteTbPs.setInt(1, section.getSectionId());
@@ -237,7 +240,7 @@ public class SectionDao {
                 SectionType.fromString(rs.getString("section_type")),
                 rs.getString("instructor"),
                 rs.getString("location"),
-                null
+                Theme.hexToColor(rs.getString("color"))
         );
     }
 
