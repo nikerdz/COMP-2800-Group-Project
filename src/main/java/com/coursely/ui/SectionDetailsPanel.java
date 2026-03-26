@@ -40,7 +40,7 @@ public class SectionDetailsPanel extends JPanel {
         JPanel infoPanel = new JPanel(new GridLayout(0, 1, 0, 8));
         infoPanel.setOpaque(false);
 
-        courseCodeLabel.setFont(Theme.FONT_HEADING.deriveFont(18f));
+        courseCodeLabel.setFont(Theme.FONT_BODY.deriveFont(18f));
         courseCodeLabel.setForeground(Theme.BRAND_BROWN);
 
         sectionCodeLabel.setFont(Theme.FONT_BODY.deriveFont(15f));

@@ -78,4 +78,18 @@ public final class Theme {
     private static Color color(String hex) {
         return Color.decode(hex);
     }
+
+    public static String colorToHex(Color c) {
+        if (c == null) return null;
+        return String.format("#%02x%02x%02x", c.getRed(), c.getGreen(), c.getBlue());
+    }
+
+    public static Color hexToColor(String hex) {
+        if (hex == null || hex.isBlank()) return null;
+        try {
+            return Color.decode(hex);
+        } catch (NumberFormatException e) {
+            return null;
+        }
+    }
 }

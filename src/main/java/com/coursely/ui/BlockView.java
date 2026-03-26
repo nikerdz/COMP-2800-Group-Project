@@ -1,7 +1,8 @@
 package com.coursely.ui;
 
-import java.awt.BorderLayout;
 import java.awt.Color;
+import java.awt.GridBagConstraints;
+import java.awt.GridBagLayout;
 import java.awt.GridLayout;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
@@ -12,6 +13,7 @@ import javax.swing.JLabel;
 import javax.swing.JMenuItem;
 import javax.swing.JPanel;
 import javax.swing.JPopupMenu;
+import javax.swing.SwingConstants;
 import javax.swing.border.EmptyBorder;
 
 import com.coursely.model.Section;
@@ -34,38 +36,45 @@ public class BlockView extends JPanel {
         this.section = section;
         this.timeBlock = timeBlock;
 
-        setLayout(new BorderLayout());
+        setLayout(new GridBagLayout());
         setOpaque(true);
         setBackground(section.getColor() == null ? Theme.BLOCK_BLUE : section.getColor());
 
-        JPanel textPanel = new JPanel(new GridLayout(0, 1, 0, 2));
+        JPanel textPanel = new JPanel(new GridLayout(0, 1, 0, 0));
         textPanel.setOpaque(false);
-        textPanel.setBorder(new EmptyBorder(4, 6, 4, 6));
+        textPanel.setBorder(new EmptyBorder(4, 4, 4, 4));
 
         JLabel courseCodeLabel = new JLabel(
                 (courseCode == null || courseCode.isBlank()) ? "Course" : courseCode
         );
-        courseCodeLabel.setFont(Theme.FONT_BODY.deriveFont(13f));
-        courseCodeLabel.setForeground(Color.BLACK);
+        courseCodeLabel.setFont(Theme.FONT_BODY.deriveFont(16f));
+        courseCodeLabel.setForeground(Theme.BRAND_BROWN);
+        courseCodeLabel.setHorizontalAlignment(SwingConstants.CENTER);
 
         String sectionCodeText = safeValue(section.getSectionCode(), "Section");
         JLabel sectionCodeLabel = new JLabel(sectionCodeText);
-        sectionCodeLabel.setFont(Theme.FONT_BODY.deriveFont(11f));
-        sectionCodeLabel.setForeground(Color.BLACK);
+        sectionCodeLabel.setFont(Theme.FONT_BODY.deriveFont(14f));
+        sectionCodeLabel.setForeground(Theme.BRAND_BROWN);
+        sectionCodeLabel.setHorizontalAlignment(SwingConstants.CENTER);
 
         String instructorLocationText = buildInstructorLocationText(
                 section.getInstructor(),
                 section.getLocation()
         );
         JLabel instructorLocationLabel = new JLabel(instructorLocationText);
-        instructorLocationLabel.setFont(Theme.FONT_BODY.deriveFont(10f));
-        instructorLocationLabel.setForeground(Color.BLACK);
+        instructorLocationLabel.setFont(Theme.FONT_BODY.deriveFont(13f));
+        instructorLocationLabel.setForeground(Theme.BRAND_BROWN);
+        instructorLocationLabel.setHorizontalAlignment(SwingConstants.CENTER);
 
         textPanel.add(courseCodeLabel);
         textPanel.add(sectionCodeLabel);
         textPanel.add(instructorLocationLabel);
 
-        add(textPanel, BorderLayout.NORTH);
+        GridBagConstraints gbc = new GridBagConstraints();
+        gbc.anchor = GridBagConstraints.CENTER;
+        gbc.fill = GridBagConstraints.HORIZONTAL;
+        gbc.weightx = 1.0;
+        add(textPanel, gbc);
         setSelected(selected);
 
         MouseAdapter clickHandler = new MouseAdapter() {
@@ -100,7 +109,7 @@ public class BlockView extends JPanel {
 
     public void setSelected(boolean selected) {
         if (selected) {
-            setBorder(BorderFactory.createLineBorder(Theme.BRAND_BLUE, 1, true));
+            setBorder(BorderFactory.createLineBorder(Theme.BRAND_BLUE, 2, true));
         } else {
             setBorder(BorderFactory.createLineBorder(new Color(160, 180, 205), 1, true));
         }

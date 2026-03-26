@@ -16,6 +16,7 @@ CREATE TABLE IF NOT EXISTS sections (
     section_type TEXT NOT NULL CHECK (section_type IN ('LECTURE', 'LAB', 'TUTORIAL', 'SEMINAR')),
     instructor TEXT,
     location TEXT,
+    color TEXT,
     FOREIGN KEY (course_id) REFERENCES courses(course_id)
         ON DELETE CASCADE
         ON UPDATE CASCADE,

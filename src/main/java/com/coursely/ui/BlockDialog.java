@@ -125,6 +125,7 @@ public final class BlockDialog {
                     courseCode,
                     courseName,
                     sectionCode,
+                    term,
                     selectedDays,
                     startInput,
                     endInput
@@ -303,17 +304,35 @@ public final class BlockDialog {
         panel.add(field, gbc);
     }
 
+    private static final List<String> VALID_TERMS = List.of(
+            "fall", "winter", "spring", "summer"
+    );
+
     private static String validateBlock(
             String courseCode,
             String courseName,
             String sectionCode,
+            String term,
             List<String> selectedDays,
             String startInput,
             String endInput
     ) {
         if (courseCode.isBlank()) return "Course code is required.";
+        if (!courseCode.matches(".*[a-zA-Z].*")) {
+            return "Course code must contain at least one letter (e.g. COMP 1410).";
+        }
         if (courseName.isBlank()) return "Course name is required.";
+        if (!courseName.matches(".*[a-zA-Z].*")) {
+            return "Course name must contain at least one letter.";
+        }
         if (sectionCode.isBlank()) return "Section code is required.";
+        if (!sectionCode.matches(".*[a-zA-Z0-9].*")) {
+            return "Section code must contain letters or numbers.";
+        }
+        if (term != null && !term.isBlank()
+                && !VALID_TERMS.contains(term.strip().toLowerCase(Locale.ENGLISH))) {
+            return "Term must be one of: Fall, Winter, Spring, or Summer.";
+        }
         if (selectedDays.isEmpty()) return "Please select at least one day.";
         if (startInput == null || endInput == null || startInput.isBlank() || endInput.isBlank()) {
             return "Start time and end time are required.";
