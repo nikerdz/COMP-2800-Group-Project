@@ -563,7 +563,7 @@ public class TimetablePanel extends JPanel {
 
     private JButton createIconButton(String imagePath) {
         JButton button = new JButton();
-        button.setIcon(ResourceUtils.loadIcon(imagePath, 18, 18));
+        button.setIcon(ResourceUtils.loadIcon(imagePath, 25, 25));
         button.setFocusPainted(false);
         button.setOpaque(false);
         button.setContentAreaFilled(false);
