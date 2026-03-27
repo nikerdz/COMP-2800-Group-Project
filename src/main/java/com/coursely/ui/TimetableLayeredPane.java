@@ -29,9 +29,10 @@ public class TimetableLayeredPane extends JLayeredPane {
         gridPanel.setBounds(0, 0, width, height);
         blockLayer.setBounds(0, 0, width, height);
 
-        int panelWidth = 250;
-        int panelHeight = 185;
         int margin = 14;
+        Dimension preferred = detailsPanel.getPreferredSize();
+        int panelWidth = Math.max(preferred.width, 280);
+        int panelHeight = Math.min(preferred.height, height - margin * 2);
 
         detailsPanel.setBounds(
                 width - panelWidth - margin,

@@ -26,7 +26,6 @@ import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.SwingConstants;
 import javax.swing.border.EmptyBorder;
-import javax.swing.border.LineBorder;
 import javax.swing.filechooser.FileNameExtensionFilter;
 
 import com.coursely.db.CourseDao;
@@ -54,7 +53,6 @@ public class TimetablePanel extends JPanel {
 
     private Schedule schedule = new Schedule("Weekly Timetable", null);
 
-    // Temporary UI-only mapping until Course objects are wired directly into loaded sections.
     private final Map<String, String> courseCodeByUiId = new LinkedHashMap<>();
 
     private String selectedSectionUiId;
@@ -87,7 +85,8 @@ public class TimetablePanel extends JPanel {
         timetableTitleLabel.setForeground(Theme.BRAND_BROWN);
         timetableTitleLabel.setHorizontalAlignment(SwingConstants.LEFT);
 
-        JButton editTitleButton = createIconButton("/images/edit-btn.png");
+        // Small icon button for editing the title — 25x25 is fine here
+        JButton editTitleButton = createIconButton("/images/edit-btn.png", 25, 25);
         editTitleButton.setToolTipText("Edit schedule name");
         editTitleButton.addActionListener(e -> editTimetableTitle());
 
@@ -97,26 +96,27 @@ public class TimetablePanel extends JPanel {
         JPanel rightPanel = new JPanel(new java.awt.FlowLayout(java.awt.FlowLayout.RIGHT, 10, 0));
         rightPanel.setOpaque(false);
 
-        JButton saveScheduleButton = new JButton("Save Schedule");
+        // Add block button — match the height of the other header buttons (36px min)
+        JButton addBlockButton = createIconButton("/images/add-btn.png", 50, 50);
+        addBlockButton.setToolTipText("Add Block");
+        addBlockButton.addActionListener(e -> addBlock());
+
+        JButton saveScheduleButton = new RoundedButton("Save Schedule", 30);
         styleHeaderButton(saveScheduleButton);
         saveScheduleButton.addActionListener(e -> saveSchedule());
 
-        JButton loadScheduleButton = new JButton("Load Schedule");
+        JButton loadScheduleButton = new RoundedButton("Load Schedule", 30);
         styleHeaderButton(loadScheduleButton);
         loadScheduleButton.addActionListener(e -> loadSchedule());
 
-        JButton exportScheduleButton = new JButton("Export Schedule");
+        JButton exportScheduleButton = new RoundedButton("Export Schedule", 30);
         styleHeaderButton(exportScheduleButton);
         exportScheduleButton.addActionListener(e -> exportSchedule());
 
-        JButton addBlockButton = new JButton("Add Block");
-        styleHeaderButton(addBlockButton);
-        addBlockButton.addActionListener(e -> addBlock());
-
+        rightPanel.add(addBlockButton);
         rightPanel.add(saveScheduleButton);
         rightPanel.add(loadScheduleButton);
         rightPanel.add(exportScheduleButton);
-        rightPanel.add(addBlockButton);
 
         headerPanel.add(leftPanel, BorderLayout.WEST);
         headerPanel.add(rightPanel, BorderLayout.EAST);
@@ -468,7 +468,6 @@ public class TimetablePanel extends JPanel {
     }
 
     private void exportSchedule() {
-        // Hide the details panel during export so it doesn't appear in the image
         boolean wasVisible = detailsPanel.isVisible();
         detailsPanel.setVisible(false);
         layeredPane.revalidate();
@@ -549,21 +548,13 @@ public class TimetablePanel extends JPanel {
     }
 
     private void styleHeaderButton(JButton btn) {
-        btn.setBackground(Theme.BRAND_OFFWHITE);
-        btn.setForeground(Theme.BRAND_BROWN);
-        btn.setFocusPainted(false);
-        btn.setOpaque(true);
-        btn.setContentAreaFilled(true);
-        btn.setFont(Theme.FONT_BODY.deriveFont(22f));
-        btn.setBorder(BorderFactory.createCompoundBorder(
-                new LineBorder(Theme.BRAND_BLUE, 2, true),
-                BorderFactory.createEmptyBorder(10, 20, 10, 20)
-        ));
+        btn.setForeground(Theme.BRAND_OFFWHITE);
+        btn.setFont(Theme.FONT_BODY.deriveFont(20f));
     }
 
-    private JButton createIconButton(String imagePath) {
+    private JButton createIconButton(String imagePath, int width, int height) {
         JButton button = new JButton();
-        button.setIcon(ResourceUtils.loadIcon(imagePath, 25, 25));
+        button.setIcon(ResourceUtils.loadIcon(imagePath, width, height));
         button.setFocusPainted(false);
         button.setOpaque(false);
         button.setContentAreaFilled(false);

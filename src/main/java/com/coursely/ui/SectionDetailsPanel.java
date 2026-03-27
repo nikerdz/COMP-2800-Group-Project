@@ -2,12 +2,14 @@ package com.coursely.ui;
 
 import java.awt.BorderLayout;
 import java.awt.Color;
-import java.awt.GridLayout;
+import java.awt.Dimension;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Consumer;
 
 import javax.swing.BorderFactory;
+import javax.swing.Box;
+import javax.swing.BoxLayout;
 import javax.swing.JButton;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
@@ -29,68 +31,80 @@ public class SectionDetailsPanel extends JPanel {
     private String currentUiId;
 
     public SectionDetailsPanel(Consumer<String> onEditSection, Consumer<String> onDeleteSection) {
-        setLayout(new BorderLayout(0, 12));
+        setLayout(new BorderLayout(0, 14));
         setOpaque(true);
-        setBackground(new Color(255, 255, 255, 245));
+        setBackground(Theme.BRAND_OFFWHITE);
         setBorder(BorderFactory.createCompoundBorder(
-                new LineBorder(Theme.BRAND_BLUE, 1, true),
-                BorderFactory.createEmptyBorder(14, 14, 14, 14)
+                new LineBorder(Theme.BRAND_BLUE, 2, true),
+                BorderFactory.createEmptyBorder(16, 16, 16, 16)
         ));
 
-        JPanel infoPanel = new JPanel(new GridLayout(0, 1, 0, 8));
-        infoPanel.setOpaque(false);
-
-        courseCodeLabel.setFont(Theme.FONT_BODY.deriveFont(18f));
+        courseCodeLabel.setFont(Theme.FONT_BODY.deriveFont(28f));
         courseCodeLabel.setForeground(Theme.BRAND_BROWN);
 
-        sectionCodeLabel.setFont(Theme.FONT_BODY.deriveFont(15f));
+        sectionCodeLabel.setFont(Theme.FONT_BODY.deriveFont(22f));
         sectionCodeLabel.setForeground(Theme.BRAND_BROWN);
 
-        typeLabel.setFont(Theme.FONT_BODY.deriveFont(14f));
-        typeLabel.setForeground(Theme.BRAND_BROWN);
-
-        instructorLabel.setFont(Theme.FONT_BODY.deriveFont(14f));
-        instructorLabel.setForeground(Theme.BRAND_BROWN);
-
-        locationLabel.setFont(Theme.FONT_BODY.deriveFont(14f));
-        locationLabel.setForeground(Theme.BRAND_BROWN);
-
-        daysLabel.setFont(Theme.FONT_BODY.deriveFont(14f));
-        daysLabel.setForeground(Theme.BRAND_BROWN);
-
-        timesLabel.setFont(Theme.FONT_BODY.deriveFont(14f));
+        for (JLabel label : new JLabel[]{ typeLabel, instructorLabel, locationLabel, daysLabel }) {
+            label.setFont(Theme.FONT_BODY.deriveFont(20f));
+            label.setForeground(Theme.BRAND_BROWN);
+        }
+        timesLabel.setFont(Theme.FONT_BODY.deriveFont(20f));
         timesLabel.setForeground(Theme.BRAND_BROWN);
 
-        infoPanel.add(courseCodeLabel);
+        // Thin divider under course code
+        JPanel divider = new JPanel();
+        divider.setBackground(new Color(
+                Theme.BRAND_BLUE.getRed(),
+                Theme.BRAND_BLUE.getGreen(),
+                Theme.BRAND_BLUE.getBlue(), 80
+        ));
+        divider.setPreferredSize(new Dimension(0, 1));
+        divider.setOpaque(true);
+
+        JPanel headerPanel = new JPanel(new BorderLayout(0, 8));
+        headerPanel.setOpaque(false);
+        headerPanel.add(courseCodeLabel, BorderLayout.NORTH);
+        headerPanel.add(divider, BorderLayout.SOUTH);
+
+        JPanel infoPanel = new JPanel();
+        infoPanel.setLayout(new BoxLayout(infoPanel, BoxLayout.Y_AXIS));
+        infoPanel.setOpaque(false);
         infoPanel.add(sectionCodeLabel);
+        infoPanel.add(Box.createRigidArea(new Dimension(0, 4)));
         infoPanel.add(typeLabel);
+        infoPanel.add(Box.createRigidArea(new Dimension(0, 4)));
         infoPanel.add(instructorLabel);
+        infoPanel.add(Box.createRigidArea(new Dimension(0, 4)));
         infoPanel.add(locationLabel);
+        infoPanel.add(Box.createRigidArea(new Dimension(0, 4)));
         infoPanel.add(daysLabel);
+        infoPanel.add(Box.createRigidArea(new Dimension(0, 4)));
         infoPanel.add(timesLabel);
 
-        JButton editButton = new JButton("Edit");
+        JPanel centrePanel = new JPanel(new BorderLayout(0, 10));
+        centrePanel.setOpaque(false);
+        centrePanel.add(headerPanel, BorderLayout.NORTH);
+        centrePanel.add(infoPanel, BorderLayout.CENTER);
+
+        JButton editButton = new RoundedButton("Edit", 30);
+        JButton deleteButton = new RoundedButton("Delete", 30);
         styleActionButton(editButton);
-        editButton.addActionListener(e -> {
-            if (currentUiId != null) {
-                onEditSection.accept(currentUiId);
-            }
-        });
-
-        JButton deleteButton = new JButton("Delete");
         styleActionButton(deleteButton);
+
+        editButton.addActionListener(e -> {
+            if (currentUiId != null) onEditSection.accept(currentUiId);
+        });
         deleteButton.addActionListener(e -> {
-            if (currentUiId != null) {
-                onDeleteSection.accept(currentUiId);
-            }
+            if (currentUiId != null) onDeleteSection.accept(currentUiId);
         });
 
-        JPanel buttonPanel = new JPanel(new GridLayout(1, 2, 8, 0));
+        JPanel buttonPanel = new JPanel(new java.awt.GridLayout(1, 2, 8, 0));
         buttonPanel.setOpaque(false);
         buttonPanel.add(editButton);
         buttonPanel.add(deleteButton);
 
-        add(infoPanel, BorderLayout.CENTER);
+        add(centrePanel, BorderLayout.CENTER);
         add(buttonPanel, BorderLayout.SOUTH);
     }
 
@@ -121,16 +135,8 @@ public class SectionDetailsPanel extends JPanel {
     }
 
     private void styleActionButton(JButton button) {
-        button.setBackground(Theme.BRAND_OFFWHITE);
-        button.setForeground(Theme.BRAND_BROWN);
-        button.setFocusPainted(false);
-        button.setOpaque(true);
-        button.setContentAreaFilled(true);
-        button.setFont(Theme.FONT_BODY.deriveFont(16f));
-        button.setBorder(BorderFactory.createCompoundBorder(
-                new LineBorder(Theme.BRAND_BLUE, 2, true),
-                BorderFactory.createEmptyBorder(6, 10, 6, 10)
-        ));
+        button.setForeground(Theme.BRAND_OFFWHITE);
+        button.setFont(Theme.FONT_BODY.deriveFont(18f));
     }
 
     private String safeValue(String value, String fallback) {
