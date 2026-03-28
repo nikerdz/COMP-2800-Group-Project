@@ -1,9 +1,15 @@
 {
+  // Directories scanned for Java source files and project resources
   "java.project.sourcePaths": [
-    "src/main/java",
-    "src/main/resources"
+    "src/main/java",      // Java source code
+    "src/main/resources"  // Non-code resources (config files, templates, etc.)
   ],
+
+  // Output directory for compiled .class files
   "java.project.outputPath": "bin",
+
+  // External .jar libraries referenced by the project
+  // ** wildcard matches any subdirectory depth within /lib
   "java.project.referencedLibraries": [
     "lib/**/*.jar"
   ]

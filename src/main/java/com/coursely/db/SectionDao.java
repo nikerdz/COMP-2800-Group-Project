@@ -13,8 +13,12 @@ import com.coursely.model.SectionType;
 import com.coursely.model.TimeBlock;
 import com.coursely.ui.Theme;
 
+// Data Access Object for CRUD operations on the sections and time_blocks tables
+// Section inserts and updates are transactional, as time blocks are written in the same operation
 public class SectionDao {
 
+    // Retrieves a section by its primary key with all associated time blocks populated
+    // Returns null if no section with the given ID exists
     public Section findById(int sectionId) {
         String sql = """
                 SELECT section_id, course_id, section_code, section_type, instructor, location, color
@@ -33,6 +37,7 @@ public class SectionDao {
                 }
 
                 Section section = mapSectionRow(rs);
+                // Load time blocks using the same connection to avoid opening a second one
                 loadTimeBlocks(conn, section);
                 return section;
             }
@@ -41,6 +46,8 @@ public class SectionDao {
         }
     }
 
+    // Inserts a section and all of its time blocks in a single transaction
+    // Rolls back both the section and any partially inserted time blocks if any step fails
     public Section insert(Section section) {
         if (section.getCourseId() == null) {
             throw new IllegalArgumentException("Cannot insert section without courseId");
@@ -68,9 +75,11 @@ public class SectionDao {
                 sectionPs.setString(3, section.getSectionType().name());
                 sectionPs.setString(4, section.getInstructor());
                 sectionPs.setString(5, section.getLocation());
+                // Color is stored as a hex string in the database
                 sectionPs.setString(6, Theme.colorToHex(section.getColor()));
                 sectionPs.executeUpdate();
 
+                // Write the generated section ID back before inserting time blocks, as they reference it
                 try (ResultSet keys = sectionPs.getGeneratedKeys()) {
                     if (keys.next()) {
                         section.setSectionId(keys.getInt(1));
@@ -84,6 +93,7 @@ public class SectionDao {
                     timeBlockPs.setString(4, tb.getEndTime().toString());
                     timeBlockPs.executeUpdate();
 
+                    // Write the generated ID and section reference back to the time block object
                     try (ResultSet tbKeys = timeBlockPs.getGeneratedKeys()) {
                         if (tbKeys.next()) {
                             tb.setTimeBlockId(tbKeys.getInt(1));
@@ -106,6 +116,8 @@ public class SectionDao {
         }
     }
 
+    // Updates a section and replaces all of its time blocks in a single transaction
+    // Time blocks are deleted and re-inserted rather than diffed, since ordering and count may change
     public void update(Section section) {
         if (section.getSectionId() == null) {
             throw new IllegalArgumentException("Cannot update section without sectionId");
@@ -144,6 +156,7 @@ public class SectionDao {
                 updatePs.setInt(7, section.getSectionId());
                 updatePs.executeUpdate();
 
+                // Remove all existing time blocks so they can be replaced with the current set
                 deleteTbPs.setInt(1, section.getSectionId());
                 deleteTbPs.executeUpdate();
 
@@ -154,6 +167,7 @@ public class SectionDao {
                     insertTbPs.setString(4, tb.getEndTime().toString());
                     insertTbPs.executeUpdate();
 
+                    // Write the new generated ID and section reference back to the time block object
                     try (ResultSet tbKeys = insertTbPs.getGeneratedKeys()) {
                         if (tbKeys.next()) {
                             tb.setTimeBlockId(tbKeys.getInt(1));
@@ -175,6 +189,8 @@ public class SectionDao {
         }
     }
 
+    // Deletes a section row by ID
+    // Cascading deletes in the schema also remove all associated time_blocks rows
     public void delete(int sectionId) {
         String sql = "DELETE FROM sections WHERE section_id = ?";
 
@@ -188,6 +204,7 @@ public class SectionDao {
         }
     }
 
+    // Returns all time blocks for a given section, ordered by day and start time
     public List<TimeBlock> findTimeBlocksBySectionId(int sectionId) {
         String sql = """
                 SELECT time_block_id, section_id, day_of_week, start_time, end_time
@@ -213,6 +230,8 @@ public class SectionDao {
         }
     }
 
+    // Loads and attaches time blocks to a section using an existing connection
+    // Reuses the caller's connection to avoid nesting connections during findById
     private void loadTimeBlocks(Connection conn, Section section) throws SQLException {
         String sql = """
                 SELECT time_block_id, section_id, day_of_week, start_time, end_time
@@ -232,6 +251,8 @@ public class SectionDao {
         }
     }
 
+    // Maps the current row of a ResultSet to a Section object
+    // Color is stored as a hex string in the DB and converted back to a Color object
     private Section mapSectionRow(ResultSet rs) throws SQLException {
         return new Section(
                 rs.getInt("section_id"),
@@ -244,6 +265,8 @@ public class SectionDao {
         );
     }
 
+    // Maps the current row of a ResultSet to a TimeBlock object
+    // start_time and end_time are stored as strings and parsed to LocalTime
     private TimeBlock mapTimeBlockRow(ResultSet rs) throws SQLException {
         return new TimeBlock(
                 rs.getInt("time_block_id"),

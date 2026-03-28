@@ -27,15 +27,34 @@ import javax.swing.JTextField;
 
 import com.coursely.model.SectionType;
 
+/**
+ * Utility class for displaying and validating the timetable block form dialog.
+ * Collects user input for creating or editing a timetable block.
+ */
 public final class BlockDialog {
 
+    // Display format used for time values shown in the dialog.
     private static final DateTimeFormatter DISPLAY_TIME_FORMAT =
             DateTimeFormatter.ofPattern("h:mm a", Locale.ENGLISH);
 
+    // Named preset colors available in the block color dropdown.
     private static final Map<String, Color> PRESET_COLORS = createPresetColors();
 
+    /**
+     * Prevents instantiation of this utility class.
+     */
     private BlockDialog() {}
 
+    /**
+     * Shows the block dialog, validates the entered data,
+     * and returns a populated BlockFormData object if confirmed.
+     *
+     * @param parent the parent component for the dialog
+     * @param dialogTitle the dialog title
+     * @param initial the initial values used to pre-fill the form
+     * @param days the ordered list of selectable day names
+     * @return the completed BlockFormData, or null if the dialog is cancelled
+     */
     public static BlockFormData show(Component parent, String dialogTitle, BlockFormData initial, String[] days) {
         JTextField courseCodeField = new JTextField(initial.courseCode, 30);
         JTextField courseNameField = new JTextField(initial.courseName, 30);
@@ -43,6 +62,7 @@ public final class BlockDialog {
         JTextField termField = new JTextField(initial.term, 30);
 
         JTextField sectionCodeField = new JTextField(initial.sectionCode, 16);
+
         JComboBox<String> sectionTypeField = new JComboBox<>(new String[] {
                 "LECTURE", "LAB", "TUTORIAL", "SEMINAR"
         });
@@ -55,10 +75,13 @@ public final class BlockDialog {
         JTextField instructorField = new JTextField(initial.instructor, 16);
         JTextField locationField = new JTextField(initial.location, 16);
 
+        // Build the day checkbox map and pre-select any days from the initial data.
         Map<String, JCheckBox> dayCheckboxes = createDayCheckboxes(days);
         for (String d : initial.days) {
             JCheckBox cb = dayCheckboxes.get(d);
-            if (cb != null) cb.setSelected(true);
+            if (cb != null) {
+                cb.setSelected(true);
+            }
         }
 
         JComboBox<String> startField = new JComboBox<>(createTimeOptions());
@@ -73,6 +96,7 @@ public final class BlockDialog {
             colorField.setSelectedItem(initialColorName);
         }
 
+        // Small swatch used to preview the currently selected block color.
         JPanel colorPreview = createColorPreviewSwatch((String) colorField.getSelectedItem());
         colorField.addActionListener(e -> updateColorPreview(colorPreview, (String) colorField.getSelectedItem()));
 
@@ -93,6 +117,7 @@ public final class BlockDialog {
                 days
         );
 
+        // Keep showing the dialog until valid input is entered or the user cancels.
         while (true) {
             int choice = JOptionPane.showConfirmDialog(
                     parent,
@@ -130,6 +155,7 @@ public final class BlockDialog {
                     startInput,
                     endInput
             );
+
             if (validationError != null) {
                 JOptionPane.showMessageDialog(parent, validationError, "Validation Error", JOptionPane.ERROR_MESSAGE);
                 continue;
@@ -156,6 +182,13 @@ public final class BlockDialog {
         }
     }
 
+    /**
+     * Converts a string into a SectionType, defaulting to LECTURE
+     * if the input is null, blank, or invalid.
+     *
+     * @param input the input section type text
+     * @return the resolved SectionType
+     */
     public static SectionType parseSectionTypeOrDefault(String input) {
         if (input == null || input.isBlank()) return SectionType.LECTURE;
         try {
@@ -165,6 +198,25 @@ public final class BlockDialog {
         }
     }
 
+    /**
+     * Builds the full form panel used inside the dialog.
+     *
+     * @param courseCodeField the course code field
+     * @param courseNameField the course name field
+     * @param facultyField the faculty field
+     * @param termField the term field
+     * @param sectionCodeField the section code field
+     * @param sectionTypeField the section type dropdown
+     * @param instructorField the instructor field
+     * @param locationField the location field
+     * @param dayCheckboxes the day checkbox map
+     * @param startField the start time dropdown
+     * @param endField the end time dropdown
+     * @param colorField the color dropdown
+     * @param colorPreview the color preview panel
+     * @param days the ordered list of day names
+     * @return the assembled form panel
+     */
     private static JPanel buildFormPanel(
             JTextField courseCodeField,
             JTextField courseNameField,
@@ -189,6 +241,7 @@ public final class BlockDialog {
         gbc.fill = GridBagConstraints.HORIZONTAL;
         gbc.anchor = GridBagConstraints.WEST;
 
+        // Apply shared font styling to the text fields and dropdowns.
         courseCodeField.setFont(Theme.FONT_BODY.deriveFont(20f));
         courseNameField.setFont(Theme.FONT_BODY.deriveFont(20f));
         facultyField.setFont(Theme.FONT_BODY.deriveFont(20f));
@@ -221,6 +274,14 @@ public final class BlockDialog {
         return form;
     }
 
+    /**
+     * Builds the combined color picker row containing the dropdown
+     * and the live preview swatch.
+     *
+     * @param colorField the color dropdown
+     * @param colorPreview the preview swatch
+     * @return the assembled color picker row
+     */
     private static JPanel createColorPickerRow(JComboBox<String> colorField, JPanel colorPreview) {
         JPanel row = new JPanel(new BorderLayout(8, 0));
         row.setOpaque(false);
@@ -229,6 +290,12 @@ public final class BlockDialog {
         return row;
     }
 
+    /**
+     * Creates the preview swatch used to show the selected color.
+     *
+     * @param colorName the initial color name
+     * @return the preview swatch panel
+     */
     private static JPanel createColorPreviewSwatch(String colorName) {
         JPanel swatch = new JPanel();
         swatch.setPreferredSize(new Dimension(28, 20));
@@ -237,16 +304,34 @@ public final class BlockDialog {
         return swatch;
     }
 
+    /**
+     * Updates the preview swatch background to match the selected color.
+     *
+     * @param swatch the preview panel
+     * @param colorName the selected color name
+     */
     private static void updateColorPreview(JPanel swatch, String colorName) {
         swatch.setBackground(getColorByName(colorName));
     }
 
+    /**
+     * Resolves a preset color by its display name.
+     *
+     * @param colorName the color name
+     * @return the matching Color, or the default block blue if not found
+     */
     private static Color getColorByName(String colorName) {
         if (colorName == null) return Theme.BLOCK_BLUE;
         Color color = PRESET_COLORS.get(colorName);
         return color == null ? Theme.BLOCK_BLUE : color;
     }
 
+    /**
+     * Finds the preset color name that matches a given Color object.
+     *
+     * @param color the color to match
+     * @return the preset name, or null if none matches
+     */
     private static String findColorName(Color color) {
         if (color == null) return null;
         for (Map.Entry<String, Color> entry : PRESET_COLORS.entrySet()) {
@@ -255,6 +340,12 @@ public final class BlockDialog {
         return null;
     }
 
+    /**
+     * Creates a checkbox for each day name and stores them in order.
+     *
+     * @param days the ordered list of day names
+     * @return a map of day names to checkboxes
+     */
     private static Map<String, JCheckBox> createDayCheckboxes(String[] days) {
         Map<String, JCheckBox> checkboxes = new LinkedHashMap<>();
         for (String day : days) {
@@ -263,6 +354,13 @@ public final class BlockDialog {
         return checkboxes;
     }
 
+    /**
+     * Builds the day selection panel containing all day checkboxes.
+     *
+     * @param dayCheckboxes the day checkbox map
+     * @param days the ordered list of day names
+     * @return the assembled day selection panel
+     */
     private static JPanel createDaySelectionPanel(Map<String, JCheckBox> dayCheckboxes, String[] days) {
         JPanel dayPanel = new JPanel(new GridLayout(0, 4, 6, 2));
         dayPanel.setOpaque(false);
@@ -278,6 +376,13 @@ public final class BlockDialog {
         return dayPanel;
     }
 
+    /**
+     * Collects the currently selected day names from the checkbox map.
+     *
+     * @param dayCheckboxes the day checkbox map
+     * @param days the ordered list of day names
+     * @return a list of selected day names
+     */
     private static List<String> getSelectedDays(Map<String, JCheckBox> dayCheckboxes, String[] days) {
         List<String> selectedDays = new ArrayList<>();
         for (String day : days) {
@@ -289,6 +394,15 @@ public final class BlockDialog {
         return selectedDays;
     }
 
+    /**
+     * Adds a labeled row to the form layout.
+     *
+     * @param panel the form panel
+     * @param gbc the shared GridBagConstraints object
+     * @param row the row index
+     * @param label the row label text
+     * @param field the input component
+     */
     private static void addRow(JPanel panel, GridBagConstraints gbc, int row, String label, Component field) {
         gbc.gridx = 0;
         gbc.gridy = row;
@@ -304,10 +418,23 @@ public final class BlockDialog {
         panel.add(field, gbc);
     }
 
+    // Valid academic terms accepted by the form validation.
     private static final List<String> VALID_TERMS = List.of(
             "fall", "winter", "spring", "summer"
     );
 
+    /**
+     * Validates the entered form data and returns an error message if invalid.
+     *
+     * @param courseCode the entered course code
+     * @param courseName the entered course name
+     * @param sectionCode the entered section code
+     * @param term the entered term
+     * @param selectedDays the selected days
+     * @param startInput the selected start time text
+     * @param endInput the selected end time text
+     * @return an error message if invalid, otherwise null
+     */
     private static String validateBlock(
             String courseCode,
             String courseName,
@@ -321,19 +448,24 @@ public final class BlockDialog {
         if (!courseCode.matches(".*[a-zA-Z].*")) {
             return "Course code must contain at least one letter (e.g. COMP 1410).";
         }
+
         if (courseName.isBlank()) return "Course name is required.";
         if (!courseName.matches(".*[a-zA-Z].*")) {
             return "Course name must contain at least one letter.";
         }
+
         if (sectionCode.isBlank()) return "Section code is required.";
         if (!sectionCode.matches(".*[a-zA-Z0-9].*")) {
             return "Section code must contain letters or numbers.";
         }
+
         if (term != null && !term.isBlank()
                 && !VALID_TERMS.contains(term.strip().toLowerCase(Locale.ENGLISH))) {
             return "Term must be one of: Fall, Winter, Spring, or Summer.";
         }
+
         if (selectedDays.isEmpty()) return "Please select at least one day.";
+
         if (startInput == null || endInput == null || startInput.isBlank() || endInput.isBlank()) {
             return "Start time and end time are required.";
         }
@@ -344,6 +476,7 @@ public final class BlockDialog {
         if (start == null || end == null) {
             return "Invalid time format. Use values like 9:00 AM.";
         }
+
         if (!end.isAfter(start)) {
             return "End time must be after start time.";
         }
@@ -351,6 +484,12 @@ public final class BlockDialog {
         return null;
     }
 
+    /**
+     * Attempts to parse a time string using several supported formats.
+     *
+     * @param time the input time string
+     * @return the parsed LocalTime, or null if parsing fails
+     */
     private static LocalTime parseTimeFlexible(String time) {
         LocalTime parsed = tryParseTime(time, "H:mm");
         if (parsed == null) parsed = tryParseTime(time, "h:mm");
@@ -358,6 +497,13 @@ public final class BlockDialog {
         return parsed;
     }
 
+    /**
+     * Attempts to parse a time string using a specific pattern.
+     *
+     * @param value the input value
+     * @param pattern the formatter pattern
+     * @return the parsed LocalTime, or null if parsing fails
+     */
     private static LocalTime tryParseTime(String value, String pattern) {
         try {
             return LocalTime.parse(
@@ -369,6 +515,11 @@ public final class BlockDialog {
         }
     }
 
+    /**
+     * Creates the dropdown time options shown in 30-minute intervals.
+     *
+     * @return an array of display time strings
+     */
     private static String[] createTimeOptions() {
         List<String> options = new ArrayList<>();
         DateTimeFormatter dropdownTimeFormat = DateTimeFormatter.ofPattern("h:mm a", Locale.ENGLISH);
@@ -384,6 +535,11 @@ public final class BlockDialog {
         return options.toArray(new String[0]);
     }
 
+    /**
+     * Creates the preset color map used in the color dropdown.
+     *
+     * @return a map of color names to Color values
+     */
     private static Map<String, Color> createPresetColors() {
         Map<String, Color> colors = new LinkedHashMap<>();
         colors.put("Blue", Theme.BLOCK_BLUE);

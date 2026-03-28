@@ -7,8 +7,10 @@ import java.sql.SQLException;
 
 import com.coursely.model.Course;
 
+// Data Access Object for CRUD operations on the courses table
 public class CourseDao {
 
+    // Retrieves a course by its primary key, returns null if not found
     public Course findById(int courseId) {
         String sql = """
                 SELECT course_id, course_code, course_name, faculty, term
@@ -33,6 +35,8 @@ public class CourseDao {
         }
     }
 
+    // Retrieves a course matching both code and term
+    // Handles the case where term is null on both sides to avoid SQL NULL comparison issues
     public Course findByCodeAndTerm(String courseCode, String term) {
         String sql = """
                 SELECT course_id, course_code, course_name, faculty, term
@@ -45,6 +49,7 @@ public class CourseDao {
         try (Connection conn = DatabaseManager.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
 
+            // term is bound twice to cover both sides of the NULL-safe comparison
             ps.setString(1, courseCode);
             ps.setString(2, term);
             ps.setString(3, term);
@@ -61,6 +66,7 @@ public class CourseDao {
         }
     }
 
+    // Inserts a new course row and assigns the generated primary key back to the object
     public Course insert(Course course) {
         String sql = """
                 INSERT INTO courses (course_code, course_name, faculty, term)
@@ -77,6 +83,7 @@ public class CourseDao {
 
             ps.executeUpdate();
 
+            // Write the auto-generated ID back to the object so the caller has it
             try (ResultSet keys = ps.getGeneratedKeys()) {
                 if (keys.next()) {
                     course.setCourseId(keys.getInt(1));
@@ -89,6 +96,8 @@ public class CourseDao {
         }
     }
 
+    // Updates all editable fields of an existing course row
+    // Requires courseId to be set, as it is used to target the correct row
     public void update(Course course) {
         if (course.getCourseId() == null) {
             throw new IllegalArgumentException("Cannot update course without courseId");
@@ -115,6 +124,8 @@ public class CourseDao {
         }
     }
 
+    // Returns an existing course matching the code and term, or inserts and returns a new one
+    // Used to avoid duplicate course entries when importing or syncing data
     public Course findOrCreate(String courseCode, String courseName, String faculty, String term) {
         Course existing = findByCodeAndTerm(courseCode, term);
         if (existing != null) {
@@ -127,6 +138,7 @@ public class CourseDao {
         return insert(course);
     }
 
+    // Maps the current row of a ResultSet to a Course object
     private Course mapRow(ResultSet rs) throws SQLException {
         return new Course(
                 rs.getInt("course_id"),

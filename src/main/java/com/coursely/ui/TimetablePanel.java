@@ -35,35 +35,63 @@ import com.coursely.model.Section;
 import com.coursely.model.TimeBlock;
 import com.coursely.service.TimetableService;
 
+/**
+ * Main UI panel for displaying and managing the weekly timetable.
+ * Handles schedule actions such as adding, editing, deleting, saving,
+ * loading, and exporting timetable blocks.
+ */
 public class TimetablePanel extends JPanel {
 
+    // Ordered list of day labels used by the timetable grid and dialogs.
     public static final String[] DAYS = {
             "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"
     };
 
+    // Visible hourly labels shown along the timetable grid.
     public static final String[] TIME_SLOTS = {
             "8:00 AM", "9:00 AM", "10:00 AM", "11:00 AM", "12:00 PM", "1:00 PM",
             "2:00 PM", "3:00 PM", "4:00 PM", "5:00 PM", "6:00 PM"
     };
 
+    // Background color used for the outer panel.
     private static final Color PANEL_BG_COLOR = Theme.BRAND_OFFWHITE;
 
+    // Service responsible for timetable-related persistence and business logic.
     private final TimetableService timetableService = new TimetableService();
+
+    // DAO used to resolve course information for loaded sections.
     private final CourseDao courseDao = new CourseDao();
 
+    // The schedule currently being viewed and edited.
     private Schedule schedule = new Schedule("Weekly Timetable", null);
 
+    // Maps UI section ids to course codes for display purposes.
     private final Map<String, String> courseCodeByUiId = new LinkedHashMap<>();
 
+    // Tracks the currently selected section in the UI.
     private String selectedSectionUiId;
+
+    // Tracks sections currently highlighted as conflicts.
     private final Set<String> conflictSectionUiIds = new HashSet<>();
 
+    // Header label showing the current schedule title.
     private JLabel timetableTitleLabel;
+
+    // Base timetable grid containing days and time slots.
     private TimetableGridPanel gridPanel;
+
+    // Overlay layer that renders timetable blocks.
     private TimetableBlockLayer blockLayer;
+
+    // Side/details panel used to show information about the selected section.
     private SectionDetailsPanel detailsPanel;
+
+    // Layered pane combining grid, blocks, and details panel.
     private TimetableLayeredPane layeredPane;
 
+    /**
+     * Creates the timetable panel and builds the main UI regions.
+     */
     public TimetablePanel() {
         setLayout(new BorderLayout(0, 12));
         setBackground(PANEL_BG_COLOR);
@@ -72,6 +100,11 @@ public class TimetablePanel extends JPanel {
         add(buildTimetableArea(), BorderLayout.CENTER);
     }
 
+    /**
+     * Builds the header area containing the schedule title and action buttons.
+     *
+     * @return the assembled header panel
+     */
     private JPanel buildHeaderPanel() {
         JPanel headerPanel = new JPanel(new BorderLayout());
         headerPanel.setOpaque(false);
@@ -85,7 +118,7 @@ public class TimetablePanel extends JPanel {
         timetableTitleLabel.setForeground(Theme.BRAND_BROWN);
         timetableTitleLabel.setHorizontalAlignment(SwingConstants.LEFT);
 
-        // Small icon button for editing the title — 25x25 is fine here
+        // Icon button used to rename the current schedule.
         JButton editTitleButton = createIconButton("/images/edit-btn.png", 25, 25);
         editTitleButton.setToolTipText("Edit schedule name");
         editTitleButton.addActionListener(e -> editTimetableTitle());
@@ -96,7 +129,7 @@ public class TimetablePanel extends JPanel {
         JPanel rightPanel = new JPanel(new java.awt.FlowLayout(java.awt.FlowLayout.RIGHT, 10, 0));
         rightPanel.setOpaque(false);
 
-        // Add block button — match the height of the other header buttons (36px min)
+        // Icon button used to add a new timetable block.
         JButton addBlockButton = createIconButton("/images/add-btn.png", 50, 50);
         addBlockButton.setToolTipText("Add Block");
         addBlockButton.addActionListener(e -> addBlock());
@@ -124,6 +157,12 @@ public class TimetablePanel extends JPanel {
         return headerPanel;
     }
 
+    /**
+     * Builds the main timetable display area, including the grid,
+     * block layer, and section details panel.
+     *
+     * @return the assembled timetable area
+     */
     private JPanel buildTimetableArea() {
         JPanel area = new JPanel(new BorderLayout());
         area.setOpaque(false);
@@ -151,6 +190,10 @@ public class TimetablePanel extends JPanel {
         return area;
     }
 
+    /**
+     * Opens the add-block dialog, validates conflicts, persists the new block,
+     * and refreshes the UI.
+     */
     private void addBlock() {
         BlockFormData data = BlockDialog.show(
                 this,
@@ -159,6 +202,8 @@ public class TimetablePanel extends JPanel {
                 DAYS
         );
         if (data == null) return;
+
+        // Prevent insertion if the proposed block overlaps an existing one.
         if (showConflictFeedbackIfNeeded(data, null)) return;
 
         ensureScheduleHasBasicInfo();
@@ -171,6 +216,12 @@ public class TimetablePanel extends JPanel {
         refreshView();
     }
 
+    /**
+     * Opens the edit dialog for a section, applies changes if confirmed,
+     * and refreshes the view.
+     *
+     * @param sectionUiId the UI id of the section to edit
+     */
     private void editBlock(String sectionUiId) {
         Section section = schedule.findSectionByUiId(sectionUiId).orElse(null);
         if (section == null) return;
@@ -183,10 +234,14 @@ public class TimetablePanel extends JPanel {
         List<String> days = new ArrayList<>();
         LocalTime start = LocalTime.of(9, 0);
         LocalTime end = LocalTime.of(10, 0);
+
+        // Use the first time block as the default time range shown in the form.
         if (!section.getTimeBlocks().isEmpty()) {
             start = section.getTimeBlocks().get(0).getStartTime();
             end = section.getTimeBlocks().get(0).getEndTime();
         }
+
+        // Collect all scheduled meeting days for the section.
         for (TimeBlock tb : section.getTimeBlocks()) {
             days.add(tb.getDayOfWeek());
         }
@@ -208,6 +263,8 @@ public class TimetablePanel extends JPanel {
 
         BlockFormData updated = BlockDialog.show(this, "Edit Timetable Block", initial, DAYS);
         if (updated == null) return;
+
+        // Prevent updates that would create a conflict with other sections.
         if (showConflictFeedbackIfNeeded(updated, sectionUiId)) return;
 
         ensureScheduleHasBasicInfo();
@@ -217,6 +274,11 @@ public class TimetablePanel extends JPanel {
         refreshView();
     }
 
+    /**
+     * Deletes a section after confirmation and refreshes the UI.
+     *
+     * @param sectionUiId the UI id of the section to delete
+     */
     private void deleteBlock(String sectionUiId) {
         Section section = schedule.findSectionByUiId(sectionUiId).orElse(null);
         if (section == null) return;
@@ -229,6 +291,8 @@ public class TimetablePanel extends JPanel {
         );
         if (confirm != JOptionPane.YES_OPTION) return;
 
+        // Use the service layer when both schedule and section already exist in the database.
+        // Otherwise remove only from the in-memory schedule.
         if (schedule.getScheduleId() != null && section.getSectionId() != null) {
             timetableService.deleteBlock(schedule, section);
         } else {
@@ -240,33 +304,62 @@ public class TimetablePanel extends JPanel {
         if (sectionUiId.equals(selectedSectionUiId)) {
             selectedSectionUiId = null;
         }
-        clearConflictHighlights();
 
+        clearConflictHighlights();
         refreshView();
     }
 
+    /**
+     * Marks a section as selected and refreshes the display.
+     *
+     * @param sectionUiId the selected section UI id
+     */
     private void selectSection(String sectionUiId) {
         selectedSectionUiId = sectionUiId;
         refreshView();
     }
 
+    /**
+     * Clears the current section selection and refreshes the display.
+     */
     private void clearSelection() {
         selectedSectionUiId = null;
         refreshView();
     }
 
+    /**
+     * Checks whether the given section is currently selected.
+     *
+     * @param sectionUiId the section UI id
+     * @return true if selected, otherwise false
+     */
     private boolean isSelected(String sectionUiId) {
         return sectionUiId != null && sectionUiId.equals(selectedSectionUiId);
     }
 
+    /**
+     * Checks whether a section is currently highlighted as conflicting.
+     *
+     * @param sectionUiId the section UI id
+     * @return true if highlighted as a conflict, otherwise false
+     */
     private boolean isConflictHighlighted(String sectionUiId) {
         return sectionUiId != null && conflictSectionUiIds.contains(sectionUiId);
     }
 
+    /**
+     * Returns the course code associated with a section UI id.
+     *
+     * @param sectionUiId the section UI id
+     * @return the course code, or an empty string if none is mapped
+     */
     private String getCourseCodeForSection(String sectionUiId) {
         return courseCodeByUiId.getOrDefault(sectionUiId, "");
     }
 
+    /**
+     * Rebuilds block visuals, updates the details panel, and repaints the UI.
+     */
     private void refreshView() {
         blockLayer.rebuildBlocks();
         updateDetailsPanel();
@@ -274,6 +367,14 @@ public class TimetablePanel extends JPanel {
         repaint();
     }
 
+    /**
+     * Builds a temporary candidate section from form data and checks whether it
+     * conflicts with existing scheduled sections.
+     *
+     * @param data the proposed block form data
+     * @param sectionUiIdToIgnore the existing section UI id to ignore during edit mode
+     * @return true if a conflict was found and feedback was shown, otherwise false
+     */
     private boolean showConflictFeedbackIfNeeded(BlockFormData data, String sectionUiIdToIgnore) {
         Section candidate = new Section(
                 null,
@@ -284,11 +385,15 @@ public class TimetablePanel extends JPanel {
                 data.location,
                 data.color
         );
+
+        // Build time blocks for the candidate section using each selected day.
         for (String day : data.days) {
             candidate.addTimeBlock(new TimeBlock(day, data.start, data.end));
         }
 
         List<Section> conflicts = schedule.findConflicts(candidate);
+
+        // Ignore the section being edited so it does not conflict with itself.
         if (sectionUiIdToIgnore != null && !sectionUiIdToIgnore.isBlank()) {
             conflicts.removeIf(s -> sectionUiIdToIgnore.equals(s.getUiId()));
         }
@@ -298,6 +403,7 @@ public class TimetablePanel extends JPanel {
             return false;
         }
 
+        // Highlight all conflicting sections and select the first one for visibility.
         conflictSectionUiIds.clear();
         for (Section conflict : conflicts) {
             conflictSectionUiIds.add(conflict.getUiId());
@@ -315,11 +421,18 @@ public class TimetablePanel extends JPanel {
         return true;
     }
 
+    /**
+     * Clears all conflict highlights.
+     */
     private void clearConflictHighlights() {
         if (conflictSectionUiIds.isEmpty()) return;
         conflictSectionUiIds.clear();
     }
 
+    /**
+     * Updates the section details panel based on the current selection.
+     * Hides the panel if nothing valid is selected.
+     */
     private void updateDetailsPanel() {
         if (selectedSectionUiId == null) {
             detailsPanel.setVisible(false);
@@ -337,6 +450,9 @@ public class TimetablePanel extends JPanel {
         detailsPanel.setVisible(true);
     }
 
+    /**
+     * Prompts the user to rename the current schedule title.
+     */
     private void editTimetableTitle() {
         String newTitle = JOptionPane.showInputDialog(
                 this,
@@ -352,6 +468,9 @@ public class TimetablePanel extends JPanel {
         }
     }
 
+    /**
+     * Prompts for a schedule name and saves the current schedule details.
+     */
     private void saveSchedule() {
         String currentName = schedule.getScheduleName() == null || schedule.getScheduleName().isBlank()
                 ? "Weekly Schedule"
@@ -390,6 +509,9 @@ public class TimetablePanel extends JPanel {
         }
     }
 
+    /**
+     * Loads a previously saved schedule selected by the user.
+     */
     private void loadSchedule() {
         List<Schedule> all;
         try {
@@ -414,6 +536,7 @@ public class TimetablePanel extends JPanel {
             return;
         }
 
+        // Build readable labels for the schedule chooser dialog.
         String[] options = all.stream()
                 .map(s -> s.getScheduleId() + "  —  " + s.getScheduleName()
                         + (s.getCreatedAt() != null ? "  (" + s.getCreatedAt() + ")" : ""))
@@ -431,6 +554,7 @@ public class TimetablePanel extends JPanel {
 
         if (choice == null) return;
 
+        // Extract the schedule id from the display string.
         int scheduleId = Integer.parseInt(choice.split("  —  ")[0].trim());
 
         try {
@@ -467,7 +591,12 @@ public class TimetablePanel extends JPanel {
         }
     }
 
+    /**
+     * Exports the current timetable view as a PNG image.
+     */
     private void exportSchedule() {
+
+        // Hide the details panel temporarily so only the timetable itself is exported.
         boolean wasVisible = detailsPanel.isVisible();
         detailsPanel.setVisible(false);
         layeredPane.revalidate();
@@ -477,6 +606,7 @@ public class TimetablePanel extends JPanel {
         fileChooser.setDialogTitle("Export Schedule as PNG");
         fileChooser.setFileFilter(new FileNameExtensionFilter("PNG Image (*.png)", "png"));
 
+        // Generate a file-safe default name from the schedule title.
         String defaultName = (schedule.getScheduleName() == null || schedule.getScheduleName().isBlank()
                 ? "schedule"
                 : schedule.getScheduleName().replaceAll("[^a-zA-Z0-9_\\-]", "_"))
@@ -498,6 +628,7 @@ public class TimetablePanel extends JPanel {
         int w = layeredPane.getWidth();
         int h = layeredPane.getHeight();
 
+        // Paint the layered pane into an off-screen image buffer.
         BufferedImage image = new BufferedImage(w, h, BufferedImage.TYPE_INT_RGB);
         Graphics2D g2 = image.createGraphics();
         layeredPane.paintAll(g2);
@@ -519,10 +650,14 @@ public class TimetablePanel extends JPanel {
                     JOptionPane.ERROR_MESSAGE
             );
         } finally {
+            // Restore the details panel visibility after export finishes or fails.
             detailsPanel.setVisible(wasVisible);
         }
     }
 
+    /**
+     * Rebuilds the course-code lookup map after a schedule is loaded from storage.
+     */
     private void rebuildCourseCodeMapFromLoadedSchedule() {
         courseCodeByUiId.clear();
 
@@ -536,6 +671,9 @@ public class TimetablePanel extends JPanel {
         }
     }
 
+    /**
+     * Ensures the current schedule has a usable name before save or block operations.
+     */
     private void ensureScheduleHasBasicInfo() {
         if (schedule.getScheduleName() == null || schedule.getScheduleName().isBlank()) {
             schedule.setScheduleName("Weekly Schedule");
@@ -547,11 +685,24 @@ public class TimetablePanel extends JPanel {
         }
     }
 
+    /**
+     * Applies consistent visual styling to header buttons.
+     *
+     * @param btn the button to style
+     */
     private void styleHeaderButton(JButton btn) {
         btn.setForeground(Theme.BRAND_OFFWHITE);
         btn.setFont(Theme.FONT_BODY.deriveFont(20f));
     }
 
+    /**
+     * Creates a transparent icon-only button using an image resource.
+     *
+     * @param imagePath the icon resource path
+     * @param width the desired icon width
+     * @param height the desired icon height
+     * @return the configured button
+     */
     private JButton createIconButton(String imagePath, int width, int height) {
         JButton button = new JButton();
         button.setIcon(ResourceUtils.loadIcon(imagePath, width, height));
@@ -565,6 +716,13 @@ public class TimetablePanel extends JPanel {
         return button;
     }
 
+    /**
+     * Formats a time range for display using a 12-hour clock.
+     *
+     * @param start the start time
+     * @param end the end time
+     * @return the formatted time range string
+     */
     public static String formatRange(LocalTime start, LocalTime end) {
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("h:mm a", Locale.ENGLISH);
         return start.format(formatter) + " - " + end.format(formatter);
