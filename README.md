@@ -1,7 +1,10 @@
+<img src="src/main/resources/images/logo2.png" alt="Coursely Logo" width="500"/>
+
 # Coursely
+A Java-based weekly course planner and timetable builder for university students.
 
 ## Overview
-Coursely is a Java-based weekly course planner and timetable builder designed to help university students organize their schedules, visualize weekly timetables, and avoid time conflicts.
+Coursely helps university students organize their schedules, visualize weekly timetables, and avoid time conflicts. Built with Java Swing and SQLite, it runs as a native desktop application with no internet connection required.
 
 ## Team Members
 - Daniyal Ahmad
@@ -11,60 +14,57 @@ Coursely is a Java-based weekly course planner and timetable builder designed to
 
 ## Course
 COMP 2800 – Software Development
+University of Windsor, Winter 2026
 
 ## Tech Stack
-- Java
-- Java Swing
-- SQLite
-- JDBC
+- Java 25
+- Java Swing (UI)
+- SQLite (local database)
+- JDBC (database connectivity)
 
-## Current Project Status (Sprint 2)
-We are currently in **Sprint 2 (Mar 16 – Mar 30)**. Sprint 1 established the project foundation (repo structure, initial UI skeleton, database schema + initialization). Sprint 2 focuses on making the application more functional and polished, including timetable block editing and usability improvements.
+## Features
+- Add, edit, and delete course time blocks on a weekly timetable grid
+- Colour-coded blocks with a preset palette
+- Time conflict detection and visual feedback
+- Save and load multiple named schedules
+- Export timetable as a PNG image
+- Persistent storage via local SQLite database
 
-### Sprint 2 Focus
-- Create/edit/remove timetable blocks (interactive controls)
-- Color-coded blocks (preset palette)
-- Conflict feedback (time overlap detection)
-- Save/load timetables locally (multiple saved schedules by title)
-- Export timetable as PNG (if time allows)
-- Branding + UI theme (logo, fonts, color scheme)
+## Downloads
+The latest release is available on the [Releases](../../releases) page.
+
+- **Windows**: Download `Coursely-1.0-windows.zip` — no Java required, just extract and double-click `Coursely.exe`
+- **Mac / Linux**: Download `Coursely-1.0-any-platform.jar` — requires Java 17+, then run:
+```
+  java -jar Coursely-1.0-any-platform.jar
+```
+> ⚠️ Avoid installing or running from paths with special characters (e.g. `!`, `&`).
+
+## How to Run from Source
+1. Clone the repository
+2. Open the project in VS Code or IntelliJ
+3. Ensure the SQLite JDBC JAR is on the classpath (see `lib/`)
+4. Run `App.java` from the `com.coursely` package
+
+On first startup the app creates the database at `~/Coursely/coursely.db` and initializes the schema automatically.
 
 ## Project Structure
-- `docs/` – planning notes, sprint reports, diagrams, and supporting documentation
-- `database/` – SQL schema and database design assets (ER diagram)
-- `data/` – local database file created at runtime (ignored by Git)
-- `src/main/java/` – main application source code
-- `src/main/resources/` – app resources (images, fonts, etc.)
-- `src/test/java/` – test source files (unit/integration tests as needed)
-- `lib/` – local JAR dependencies (e.g., SQLite JDBC driver)
+```
+src/main/java/        — application source code
+  com/coursely/
+    db/               — database layer (DAOs, DatabaseManager, initializer)
+    model/            — data models (Schedule, Section, TimeBlock, etc.)
+    service/          — business logic
+    ui/               — Swing UI components
+src/main/resources/   — fonts, images, and schema
+database/             — SQL schema file
+lib/                  — SQLite JDBC driver JAR
+docs/                 — planning notes, sprint reports, diagrams
+```
 
-## How to Run
-1. Open the project in your IDE (VS Code / IntelliJ).
-2. Ensure the SQLite JDBC JAR is available (see `lib/` and VS Code referenced libraries settings if applicable).
-3. Run `App.java` from the `com.coursely` package.
+## Database
+The app uses SQLite. The schema is defined in `database/schema.sql` and is automatically applied on first run. The database file is created at:
+- **Windows**: `C:\Users\<you>\Coursely\coursely.db`
+- **Mac/Linux**: `~/Coursely/coursely.db`
 
-On startup, the app initializes the SQLite database using `database/schema.sql` and creates `data/coursely.db` if it does not exist.
-
-## Branch Workflow
-Use feature branches for development and merge into `main` via Pull Request after review.
-
-**Branch naming:**
-- `feature/<short-description>`
-- `fix/<short-description>`
-- `docs/<short-description>`
-
-Examples:
-- `feature/block-edit-delete`
-- `feature/schedule-save-load`
-- `feature/ui-theme-branding`
-- `fix/db-init`
-- `docs/sprint2-update`
-
-**Commit messages:**
-Use short, descriptive messages starting with a verb:
-- `Add timetable block edit/delete actions`
-- `Implement schedule save/load to SQLite`
-- `Apply branding theme and logo assets`
-
-## Sprint 2 Goal
-Deliver a functional, polished timetable builder where users can create, edit, and remove blocks, see them clearly on the weekly grid (with colors), and begin saving/loading schedules locally.
+No manual database setup or connection configuration is required.
