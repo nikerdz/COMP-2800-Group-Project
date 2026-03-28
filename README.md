@@ -7,7 +7,7 @@ A Java-based weekly course planner and timetable builder for university students
 Coursely helps university students organize their schedules, visualize weekly timetables, and avoid time conflicts. Built with Java Swing and SQLite, it runs as a native desktop application with no internet connection required.
 
 ## Tech Stack
-- Java 25
+- Java 17+
 - Java Swing (UI)
 - SQLite (local database)
 - JDBC (database connectivity)
