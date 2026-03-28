@@ -29,3 +29,15 @@ build/
 *.db
 *.sqlite
 *.sqlite3
+
+# Build output
+out/
+fat-jar-temp/
+sources.txt
+manifest.txt
+coursely.jar
+jar-input/
+
+# Release / jpackage output
+release/
+C:/CourselyBuild/
