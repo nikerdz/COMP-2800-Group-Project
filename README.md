@@ -66,5 +66,6 @@ No manual database setup or connection configuration is required.
 - Anika Khan
 
 ## Course
-COMP 2800 – Software Development
-University of Windsor, Winter 2026
+COMP 2800 – Software Development 
+- Dr. Andreas Maniatis
+- University of Windsor, Winter 2026
