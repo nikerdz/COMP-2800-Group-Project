@@ -12,6 +12,9 @@ Coursely helps university students organize their schedules, visualize weekly ti
 - **Mac/Linux:** run `java -jar Coursely-1.0-any-platform.jar`
 - The SQLite database is created automatically on first launch.
 
+## Deliverable Notes
+This repository contains the full source code, release builds, project structure, and database schema for the COMP 2800 group project deliverable D.3.
+
 ## Tech Stack
 - Java 17+
 - Java Swing (UI)
