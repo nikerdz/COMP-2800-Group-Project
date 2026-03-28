@@ -1,26 +1,18 @@
 package com.coursely.db;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
-import java.nio.file.Path;
 import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
-import java.util.List;
 
 public final class DatabaseInitializer {
-
-    private static final Path SCHEMA_PATH = Path.of("database", "schema.sql");
 
     private DatabaseInitializer() { }
 
     public static void initialize() {
-        if (!Files.exists(SCHEMA_PATH)) {
-            throw new RuntimeException("schema.sql not found at: " + SCHEMA_PATH.toAbsolutePath());
-        }
-
         try (Connection conn = DatabaseManager.getConnection()) {
             runSchema(conn);
             runMigrations(conn);
@@ -30,7 +22,6 @@ public final class DatabaseInitializer {
     }
 
     private static void runMigrations(Connection conn) throws SQLException {
-        // Add color column to sections if it doesn't exist
         try (ResultSet rs = conn.getMetaData().getColumns(null, null, "sections", "color")) {
             if (!rs.next()) {
                 try (Statement s = conn.createStatement()) {
@@ -41,13 +32,14 @@ public final class DatabaseInitializer {
     }
 
     private static void runSchema(Connection conn) throws IOException, SQLException {
-        List<String> lines = Files.readAllLines(SCHEMA_PATH, StandardCharsets.UTF_8);
+        InputStream is = DatabaseInitializer.class.getResourceAsStream("/database/schema.sql");
+        if (is == null) {
+            throw new RuntimeException("schema.sql not found in JAR resources");
+        }
 
-        // Join lines and split by semicolon to get statements.
-        // This assumes schema.sql uses ';' to end each statement.
-        String sql = String.join("\n", lines);
+        String sql = new String(is.readAllBytes(), StandardCharsets.UTF_8);
 
-        // Remove simple SQL line comments
+        // Remove SQL line comments
         sql = sql.replaceAll("(?m)^\\s*--.*$", "");
 
         String[] statements = sql.split(";");
@@ -62,22 +54,22 @@ public final class DatabaseInitializer {
     }
 
     public static void verifyTablesExist(String... expectedTables) {
-    try (Connection conn = DatabaseManager.getConnection();
-         Statement st = conn.createStatement()) {
+        try (Connection conn = DatabaseManager.getConnection();
+             Statement st = conn.createStatement()) {
 
-        for (String table : expectedTables) {
-            try (ResultSet rs = st.executeQuery(
-                    "SELECT name FROM sqlite_master WHERE type='table' AND name='" + table + "';")) {   // Sprint 2: Update to use prepared statement to prevent SQL injection
-                if (!rs.next()) {
-                    throw new RuntimeException("Expected table missing: " + table);
+            for (String table : expectedTables) {
+                try (ResultSet rs = st.executeQuery(
+                        "SELECT name FROM sqlite_master WHERE type='table' AND name='" + table + "';")) {
+                    if (!rs.next()) {
+                        throw new RuntimeException("Expected table missing: " + table);
+                    }
                 }
             }
+
+            System.out.println("Verified tables exist: " + String.join(", ", expectedTables));
+
+        } catch (SQLException e) {
+            throw new RuntimeException("Table verification failed", e);
         }
-
-        System.out.println("Verified tables exist: " + String.join(", ", expectedTables));
-
-    } catch (SQLException e) {
-        throw new RuntimeException("Table verification failed", e);
     }
-}
 }
