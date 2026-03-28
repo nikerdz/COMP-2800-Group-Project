@@ -6,16 +6,6 @@ A Java-based weekly course planner and timetable builder for university students
 ## Overview
 Coursely helps university students organize their schedules, visualize weekly timetables, and avoid time conflicts. Built with Java Swing and SQLite, it runs as a native desktop application with no internet connection required.
 
-## Team Members
-- Daniyal Ahmad
-- Landon Hadre
-- Shannel Narula
-- Anika Khan
-
-## Course
-COMP 2800 – Software Development
-University of Windsor, Winter 2026
-
 ## Tech Stack
 - Java 25
 - Java Swing (UI)
@@ -68,3 +58,13 @@ The app uses SQLite. The schema is defined in `database/schema.sql` and is autom
 - **Mac/Linux**: `~/Coursely/coursely.db`
 
 No manual database setup or connection configuration is required.
+
+## Team Members
+- Daniyal Ahmad
+- Landon Hadre
+- Shannel Narula
+- Anika Khan
+
+## Course
+COMP 2800 – Software Development
+University of Windsor, Winter 2026
