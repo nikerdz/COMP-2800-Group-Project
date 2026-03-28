@@ -15,6 +15,9 @@ Coursely helps university students organize their schedules, visualize weekly ti
 ## Deliverable Notes
 This repository contains the full source code, release builds, project structure, and database schema for the COMP-2800 Group Project deliverable D.3.
 
+## Deployment Notes
+Coursely is a desktop application and does not require a web server or persistent VM hosting for normal operation. Deployment for this project consists of packaging and distributing the application as a runnable executable (`.exe`) and runnable fat JAR (`.jar`). The application runs locally and initializes its SQLite database automatically on first launch.
+
 ## Tech Stack
 - Java 17+
 - Java Swing (UI)
