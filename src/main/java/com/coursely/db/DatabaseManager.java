@@ -1,4 +1,3 @@
-
 package com.coursely.db;
 
 import java.nio.file.Files;
@@ -10,9 +9,11 @@ import java.sql.SQLException;
 
 public final class DatabaseManager {
 
-    private static final String DB_DIR = "data";
+    private static final Path DB_DIR = Paths.get(
+            System.getProperty("user.home"), "Coursely"
+    );
     private static final String DB_FILE = "coursely.db";
-    private static final String JDBC_URL = "jdbc:sqlite:" + Paths.get(DB_DIR, DB_FILE).toString();
+    private static final String JDBC_URL = "jdbc:sqlite:" + DB_DIR.resolve(DB_FILE).toString();
 
     private DatabaseManager() { }
 
@@ -27,9 +28,8 @@ public final class DatabaseManager {
 
     private static void ensureDbDirectoryExists() {
         try {
-            Path dir = Paths.get(DB_DIR);
-            if (!Files.exists(dir)) {
-                Files.createDirectories(dir);
+            if (!Files.exists(DB_DIR)) {
+                Files.createDirectories(DB_DIR);
             }
         } catch (java.io.IOException | SecurityException e) {
             throw new RuntimeException("Failed to create DB directory: " + DB_DIR, e);
